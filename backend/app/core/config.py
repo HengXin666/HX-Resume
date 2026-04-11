@@ -15,8 +15,16 @@ class Settings(BaseSettings):
     GITHUB_REPO: str = ""  # e.g. "username/private-resume-data"
     GITHUB_BRANCH: str = "main"
 
-    # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS – cover all Vite dev-server ports (auto-increments when 5173 is busy)
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://localhost:5177",
+        "http://localhost:5178",
+        "http://localhost:3000",
+    ]
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import JSON, DateTime, String, Text
+from sqlalchemy import JSON, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -18,15 +18,18 @@ class Resume(Base):
     basics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     education: Mapped[list | None] = mapped_column(JSON, nullable=True)
     work: Mapped[list | None] = mapped_column(JSON, nullable=True)
-    skills: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    skills_text: Mapped[str] = mapped_column(Text, default="")
     projects: Mapped[list | None] = mapped_column(JSON, nullable=True)
     awards: Mapped[list | None] = mapped_column(JSON, nullable=True)
     languages: Mapped[list | None] = mapped_column(JSON, nullable=True)
     interests: Mapped[list | None] = mapped_column(JSON, nullable=True)
     custom_sections: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
-    # Style settings
+    # Style & layout settings
     style_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    section_visibility: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    section_order: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     # Metadata
     source: Mapped[str] = mapped_column(String(20), default="local")  # local / github

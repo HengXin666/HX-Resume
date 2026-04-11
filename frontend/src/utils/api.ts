@@ -6,6 +6,8 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// ── Resume APIs ──
+
 export async function fetchResumes(): Promise<ResumeData[]> {
   const { data } = await api.get('/resumes/');
   return data;
@@ -34,8 +36,44 @@ export async function updateResume(
   return data;
 }
 
-export async function deleteResume(id: string): Promise<void> {
+export async function deleteResumeApi(id: string): Promise<void> {
   await api.delete(`/resumes/${id}`);
+}
+
+/**
+ * Push the entire local resume list to the backend (source of truth = frontend).
+ * The backend will upsert all incoming and delete any local-source resumes not included.
+ */
+export async function syncResumesToBackend(
+  resumes: ResumeData[],
+  activeResumeId: string | null
+): Promise<{ synced: number; ids: string[] }> {
+  const payload = {
+    resumes: resumes.map((r) => ({
+      id: r.id,
+      data: {
+        title: r.title,
+        slug: r.slug,
+        template_id: r.template_id,
+        basics: r.basics,
+        education: r.education,
+        work: r.work,
+        skills_text: r.skills_text,
+        projects: r.projects,
+        awards: r.awards,
+        languages: r.languages,
+        interests: r.interests,
+        custom_sections: r.custom_sections,
+        style_config: r.style_config,
+        section_visibility: r.section_visibility,
+        section_order: r.section_order,
+        sort_order: r.sort_order,
+      },
+    })),
+    active_resume_id: activeResumeId,
+  };
+  const { data } = await api.put('/resumes/sync', payload);
+  return data;
 }
 
 export async function syncFromGithub(): Promise<{ synced: unknown[]; count: number }> {

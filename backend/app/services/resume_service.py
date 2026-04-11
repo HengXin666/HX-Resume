@@ -9,24 +9,36 @@ from app.schemas.resume import ResumeCreate, ResumeUpdate
 from app.services.github_service import github_service
 
 
+def _dump_field(val: Any) -> Any:
+    """Call .model_dump() on Pydantic models, pass through plain values."""
+    if val is None:
+        return None
+    if hasattr(val, "model_dump"):
+        return val.model_dump()
+    if isinstance(val, list) and val and hasattr(val[0], "model_dump"):
+        return [v.model_dump() for v in val]
+    return val
+
+
 async def create_resume(db: AsyncSession, data: ResumeCreate) -> Resume:
     resume = Resume(
         id=str(uuid.uuid4()),
         title=data.title,
         slug=data.slug,
         template_id=data.template_id,
-        basics=data.basics.model_dump() if data.basics else None,
-        education=[e.model_dump() for e in data.education] if data.education else None,
-        work=[w.model_dump() for w in data.work] if data.work else None,
-        skills=[s.model_dump() for s in data.skills] if data.skills else None,
-        projects=[p.model_dump() for p in data.projects] if data.projects else None,
-        awards=data.awards,
-        languages=data.languages,
-        interests=data.interests,
-        custom_sections=(
-            [cs.model_dump() for cs in data.custom_sections] if data.custom_sections else None
-        ),
-        style_config=data.style_config.model_dump() if data.style_config else None,
+        basics=_dump_field(data.basics),
+        education=_dump_field(data.education),
+        work=_dump_field(data.work),
+        skills_text=data.skills_text,
+        projects=_dump_field(data.projects),
+        awards=_dump_field(data.awards),
+        languages=_dump_field(data.languages),
+        interests=_dump_field(data.interests),
+        custom_sections=_dump_field(data.custom_sections),
+        style_config=_dump_field(data.style_config),
+        section_visibility=_dump_field(data.section_visibility),
+        section_order=data.section_order,
+        sort_order=data.sort_order,
         source="local",
     )
     db.add(resume)
@@ -46,7 +58,7 @@ async def get_resume_by_slug(db: AsyncSession, slug: str) -> Resume | None:
 
 
 async def list_resumes(db: AsyncSession) -> list[Resume]:
-    result = await db.execute(select(Resume).order_by(Resume.updated_at.desc()))
+    result = await db.execute(select(Resume).order_by(Resume.sort_order, Resume.updated_at.desc()))
     return list(result.scalars().all())
 
 
@@ -57,21 +69,15 @@ async def update_resume(db: AsyncSession, resume_id: str, data: ResumeUpdate) ->
 
     update_data = data.model_dump(exclude_unset=True)
 
-    # Handle nested model dumps
-    if "basics" in update_data and data.basics:
-        update_data["basics"] = data.basics.model_dump()
-    if "education" in update_data and data.education:
-        update_data["education"] = [e.model_dump() for e in data.education]
-    if "work" in update_data and data.work:
-        update_data["work"] = [w.model_dump() for w in data.work]
-    if "skills" in update_data and data.skills:
-        update_data["skills"] = [s.model_dump() for s in data.skills]
-    if "projects" in update_data and data.projects:
-        update_data["projects"] = [p.model_dump() for p in data.projects]
-    if "custom_sections" in update_data and data.custom_sections:
-        update_data["custom_sections"] = [cs.model_dump() for cs in data.custom_sections]
-    if "style_config" in update_data and data.style_config:
-        update_data["style_config"] = data.style_config.model_dump()
+    # Dump nested Pydantic models to dicts
+    for key in (
+        "basics", "education", "work", "projects", "awards",
+        "languages", "interests", "custom_sections", "style_config",
+        "section_visibility",
+    ):
+        if key in update_data:
+            raw = getattr(data, key)
+            update_data[key] = _dump_field(raw)
 
     for key, value in update_data.items():
         setattr(resume, key, value)
@@ -90,6 +96,58 @@ async def delete_resume(db: AsyncSession, resume_id: str) -> bool:
     return True
 
 
+async def upsert_resume(db: AsyncSession, resume_id: str, data: ResumeCreate) -> Resume:
+    """Create or fully replace a resume by its id."""
+    existing = await get_resume(db, resume_id)
+    if existing:
+        # Full replace
+        existing.title = data.title
+        existing.slug = data.slug
+        existing.template_id = data.template_id
+        existing.basics = _dump_field(data.basics)
+        existing.education = _dump_field(data.education)
+        existing.work = _dump_field(data.work)
+        existing.skills_text = data.skills_text
+        existing.projects = _dump_field(data.projects)
+        existing.awards = _dump_field(data.awards)
+        existing.languages = _dump_field(data.languages)
+        existing.interests = _dump_field(data.interests)
+        existing.custom_sections = _dump_field(data.custom_sections)
+        existing.style_config = _dump_field(data.style_config)
+        existing.section_visibility = _dump_field(data.section_visibility)
+        existing.section_order = data.section_order
+        existing.sort_order = data.sort_order
+        existing.source = "local"
+        await db.commit()
+        await db.refresh(existing)
+        return existing
+    else:
+        resume = Resume(
+            id=resume_id,
+            title=data.title,
+            slug=data.slug,
+            template_id=data.template_id,
+            basics=_dump_field(data.basics),
+            education=_dump_field(data.education),
+            work=_dump_field(data.work),
+            skills_text=data.skills_text,
+            projects=_dump_field(data.projects),
+            awards=_dump_field(data.awards),
+            languages=_dump_field(data.languages),
+            interests=_dump_field(data.interests),
+            custom_sections=_dump_field(data.custom_sections),
+            style_config=_dump_field(data.style_config),
+            section_visibility=_dump_field(data.section_visibility),
+            section_order=data.section_order,
+            sort_order=data.sort_order,
+            source="local",
+        )
+        db.add(resume)
+        await db.commit()
+        await db.refresh(resume)
+        return resume
+
+
 async def sync_from_github(db: AsyncSession) -> list[dict[str, Any]]:
     """Sync resume data from GitHub private repo into SQLite."""
     remote_files = await github_service.list_resumes()
@@ -104,14 +162,12 @@ async def sync_from_github(db: AsyncSession) -> list[dict[str, Any]]:
         existing = await get_resume_by_slug(db, slug)
 
         if existing:
-            # Update existing
             for key, value in data.items():
                 if hasattr(existing, key) and key not in ("id", "created_at"):
                     setattr(existing, key, value)
             existing.source = "github"
             existing.github_path = file_info["path"]
         else:
-            # Create new
             resume = Resume(
                 id=str(uuid.uuid4()),
                 title=data.get("title", slug),
@@ -120,13 +176,16 @@ async def sync_from_github(db: AsyncSession) -> list[dict[str, Any]]:
                 basics=data.get("basics"),
                 education=data.get("education"),
                 work=data.get("work"),
-                skills=data.get("skills"),
+                skills_text=data.get("skills_text", ""),
                 projects=data.get("projects"),
                 awards=data.get("awards"),
                 languages=data.get("languages"),
                 interests=data.get("interests"),
                 custom_sections=data.get("custom_sections"),
                 style_config=data.get("style_config"),
+                section_visibility=data.get("section_visibility"),
+                section_order=data.get("section_order"),
+                sort_order=data.get("sort_order", 0),
                 source="github",
                 github_path=file_info["path"],
             )

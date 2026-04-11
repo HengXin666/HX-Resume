@@ -6,10 +6,13 @@ import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import EditorPage from './pages/EditorPage';
 import { useThemeStore } from './stores/themeStore';
+import { useBackendSync } from './hooks/useBackendSync';
 import './styles/cyberpunk.css';
 
 export default function App() {
   const { mode } = useThemeStore();
+  // Sync resume data with backend (auto push on changes, pull on startup)
+  useBackendSync();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', mode);

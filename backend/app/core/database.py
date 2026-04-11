@@ -20,5 +20,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     import app.models.font  # noqa: F401 — ensure Font table is registered
+    import app.models.resume  # noqa: F401 — ensure Resume table is registered
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
