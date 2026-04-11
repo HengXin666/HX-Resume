@@ -1,0 +1,21 @@
+__pycache__/
+settings.json
+router.json
+.claude/worktrees
+.claude/scheduled_tasks.lock
+
+# Backend
+backend/*.db
+backend/.env
+backend/.venv/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# codebuddy
+.codebuddy/

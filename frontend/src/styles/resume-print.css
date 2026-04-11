@@ -1,0 +1,209 @@
+/* ═══════════════════════════════════════════════
+   Resume Preview & Print Styles
+   ═══════════════════════════════════════════════ */
+
+/* CSS variables for resume colors — light by default */
+.resume-page {
+  --resume-bg: #ffffff;
+  --resume-text: #1a1a1a;
+  --resume-h1: #111;
+  --resume-h2: #222;
+  --resume-h3: #333;
+  --resume-muted: #555;
+  --resume-dim: #888;
+  --resume-body: #444;
+  --resume-contact: #555;
+  --resume-highlight: #444;
+  --resume-divider: #ddd;
+  --resume-tag-bg: #f5f5f5;
+  --resume-link: #2563eb;
+  --resume-shadow: 0 4px 32px rgba(0, 0, 0, 0.3);
+  --resume-sub: #8a7e6b;
+  --resume-sub-dim: #c5b9a8;
+
+  /* Page dimensions — driven by CSS custom properties set inline by templates */
+  --page-width: 210mm;
+  --page-min-height: 297mm;
+  width: var(--page-width);
+  min-height: var(--page-min-height);
+  background: var(--resume-bg);
+  color: var(--resume-text);
+  padding: 20mm 24mm;
+  font-family: 'Noto Sans SC', 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  box-shadow: var(--resume-shadow);
+  position: relative;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Dark preview mode — applied via wrapper class, NOT during export */
+.resume-preview-dark .resume-page {
+  --resume-bg: #1a1a2e;
+  --resume-text: #d8d8e8;
+  --resume-h1: #e8e8f8;
+  --resume-h2: #d0d0e4;
+  --resume-h3: #c0c0d4;
+  --resume-muted: #a0a0bc;
+  --resume-dim: #8080a0;
+  --resume-body: #b8b8d0;
+  --resume-contact: #a0a0bc;
+  --resume-highlight: #b0b0c8;
+  --resume-divider: #2a2a48;
+  --resume-tag-bg: rgba(255, 255, 255, 0.06);
+    --resume-link: #60a5fa;
+    --resume-shadow: 0 4px 32px rgba(0, 0, 0, 0.6), 0 0 1px rgba(0, 240, 255, 0.15);
+    --resume-sub: #b8ad9a;
+    --resume-sub-dim: #8a806e;
+}
+
+.resume-page h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--resume-h1);
+}
+
+.resume-page h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--resume-h2);
+  margin-top: 16px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+}
+
+.resume-page h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--resume-h3);
+}
+
+.resume-section {
+  margin-bottom: 16px;
+}
+
+.resume-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--resume-contact);
+  margin-bottom: 12px;
+}
+
+.resume-contact a {
+  color: var(--resume-link);
+  text-decoration: none;
+}
+
+/* All links inside resume-page use unified blue */
+.resume-page a {
+  color: var(--resume-link);
+}
+
+.resume-summary {
+  font-size: 14px;
+  color: var(--resume-body);
+  line-height: 1.7;
+}
+
+.resume-item {
+  margin-bottom: 12px;
+}
+
+.resume-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1px;
+}
+
+.resume-item-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.resume-item-date {
+  font-size: 13px;
+  color: var(--resume-dim);
+  white-space: nowrap;
+}
+
+.resume-item-subtitle {
+  font-size: 14px;
+  color: var(--resume-muted);
+}
+
+.resume-item-desc {
+  color: var(--resume-body);
+  margin-top: 4px;
+}
+
+/* Clickable sections in preview — hover highlight */
+.resume-section--clickable:hover {
+  background: rgba(0, 240, 255, 0.03);
+  border-radius: 4px;
+}
+
+.resume-highlights {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0 0;
+}
+
+.resume-highlights li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 3px;
+  color: var(--resume-highlight);
+  line-height: 1.6;
+}
+
+.resume-highlights li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  font-size: 12px;
+}
+
+.resume-skills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.resume-skill-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Print media query — always light */
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+  .resume-page {
+    --resume-bg: #ffffff !important;
+    --resume-text: #1a1a1a !important;
+    --resume-h1: #111 !important;
+    --resume-h2: #222 !important;
+    --resume-h3: #333 !important;
+    --resume-muted: #555 !important;
+    --resume-dim: #888 !important;
+    --resume-body: #444 !important;
+    --resume-contact: #555 !important;
+    --resume-highlight: #444 !important;
+    --resume-divider: #ddd !important;
+    --resume-tag-bg: #f5f5f5 !important;
+    --resume-link: #2563eb !important;
+    box-shadow: none;
+    margin: 0;
+    min-height: auto;
+  }
+}
