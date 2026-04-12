@@ -1,136 +1,183 @@
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import type { ResumeData } from '../types/resume';
-
-/** Page dimensions in mm */
-const PAGE_SIZES = {
-  A4: { width: 210, height: 297 },
-  Letter: { width: 216, height: 279 },
-} as const;
-
-/** mm to px at 96 dpi */
-const MM_TO_PX = 96 / 25.4;
 
 /**
  * Export the resume preview DOM element as a PDF file.
  *
- * Strategy: clone the .resume-page element, place the clone at 1:1 scale
- * in a hidden off-screen container, capture with html2canvas, then
- * generate exact A4/Letter PDF with jsPDF.
+ * Strategy: use the browser's native print dialog via an invisible iframe.
+ * This ensures the PDF output is **pixel-identical** to the preview because
+ * the same DOM + CSS is used. Links remain clickable, images render natively,
+ * and page dimensions are controlled by @page CSS rules.
  *
- * This avoids the issue where the preview is CSS-scaled (transform: scale(0.55))
- * causing html2canvas to capture a smaller image.
+ * Replaces the old html2canvas + jsPDF approach which produced a rasterised
+ * image — losing links, mis-sizing pages, and sometimes dropping images.
  */
 export async function exportToPDF(
   element: HTMLElement,
-  filename: string = 'resume.pdf'
+  _filename: string = 'resume.pdf',
 ): Promise<void> {
   // Detect page size from CSS variable
   const computedStyle = getComputedStyle(element);
   const pageWidthVar = computedStyle.getPropertyValue('--page-width').trim() || '210mm';
   const isLetter = pageWidthVar.includes('216');
-  const { width: pdfW, height: pdfH } = isLetter ? PAGE_SIZES.Letter : PAGE_SIZES.A4;
 
-  // Target pixel dimensions at 96dpi (matches CSS mm units)
-  const targetWidthPx = pdfW * MM_TO_PX;
+  // ── 1. Collect all stylesheets ──
+  const styleContent = collectStyles();
 
-  // ── 1. Clone the element and place at 1:1 in a hidden container ──
+  // ── 2. Clone the element at 1:1 (no scale transform) ──
   const clone = element.cloneNode(true) as HTMLElement;
-
-  // Collect all <style> and <link> from the document to clone into the container
-  const container = document.createElement('div');
-  container.style.cssText = [
-    'position: fixed',
-    'top: 0',
-    'left: 0',
-    `width: ${targetWidthPx}px`,
-    'z-index: -9999',
-    'overflow: hidden',
-    'pointer-events: none',
-    'opacity: 0',
-  ].join('; ');
-
-  // Force light-mode CSS vars + reset transform/shadow
-  const lightVars = [
-    '--resume-bg: #ffffff',
-    '--resume-text: #1a1a1a',
-    '--resume-h1: #111',
-    '--resume-h2: #222',
-    '--resume-h3: #333',
-    '--resume-muted: #555',
-    '--resume-dim: #888',
-    '--resume-body: #444',
-    '--resume-contact: #555',
-    '--resume-highlight: #444',
-    '--resume-divider: #ddd',
-    '--resume-tag-bg: #f5f5f5',
-    '--resume-link: #2563eb',
-    '--resume-sub: #8a7e6b',
-    '--resume-sub-dim: #c5b9a8',
-  ].join('; ');
-
-  clone.style.cssText = `${clone.style.cssText}; ${lightVars}; `
-    + 'transform: none !important; '
-    + `width: ${targetWidthPx}px !important; `
-    + 'box-shadow: none !important; '
-    + 'background: #ffffff !important; '
-    + 'color: #1a1a1a !important; '
-    + 'margin: 0 !important; ';
-
-  // Remove any resume-preview-dark class from clone ancestors
+  // Strip any preview-only classes
   clone.classList.remove('resume-preview-dark');
-
-  container.appendChild(clone);
-  document.body.appendChild(container);
-
-  // Wait for layout and images
-  await new Promise((r) => setTimeout(r, 300));
-
-  // ── 2. Capture with html2canvas at 2x for sharp output ──
-  const scale = 2;
-  const canvas = await html2canvas(clone, {
-    scale,
-    useCORS: true,
-    backgroundColor: '#ffffff',
-    logging: false,
-    allowTaint: true,
-    width: targetWidthPx,
-    windowWidth: targetWidthPx,
+  // Remove cursor / hover styles added for preview interactivity
+  clone.querySelectorAll('.resume-section--clickable').forEach((el) => {
+    (el as HTMLElement).style.cursor = 'default';
   });
 
-  // Remove the temporary container
-  document.body.removeChild(container);
+  // ── 3. Build print-specific @page + body rules ──
+  const pageSize = isLetter ? 'letter' : 'A4';
+  const printCSS = `
+    @page {
+      size: ${pageSize} portrait;
+      margin: 0;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+    }
+    /* Force light mode variables */
+    .resume-page {
+      --resume-bg: #ffffff;
+      --resume-text: #1a1a1a;
+      --resume-h1: #111;
+      --resume-h2: #222;
+      --resume-h3: #333;
+      --resume-muted: #555;
+      --resume-dim: #888;
+      --resume-body: #444;
+      --resume-contact: #555;
+      --resume-highlight: #444;
+      --resume-divider: #ddd;
+      --resume-tag-bg: #f5f5f5;
+      --resume-link: #2563eb;
+      --resume-sub: #8a7e6b;
+      --resume-sub-dim: #c5b9a8;
+      box-shadow: none !important;
+      margin: 0 !important;
+    }
+    /* Ensure clickable sections look normal in print */
+    .resume-section--clickable:hover {
+      background: transparent !important;
+    }
+    /* Fine-grained page-break control: avoid breaks inside items, not sections */
+    .resume-section > h2,
+    .resume-section--clickable > div:first-child {
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+    .resume-item,
+    [data-item-index] {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    /* Make links visually distinct and keep clickable */
+    a {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    /* Contact links should NOT be blue/underlined in PDF */
+    .resume-contact a,
+    .header-contact-link {
+      color: inherit !important;
+      text-decoration: none !important;
+    }
+    /* Ensure SVG icons render in print */
+    svg {
+      display: inline-block !important;
+    }
+  `;
 
-  // ── 3. Generate PDF ──
-  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  // ── 4. Create hidden iframe ──
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px;';
+  document.body.appendChild(iframe);
 
-  // The canvas pixel dimensions: canvas.width = targetWidthPx * scale
-  // Map canvas width to PDF page width (mm)
-  const imgWidthMM = pdfW;
-  const imgHeightMM = (canvas.height * pdfW) / canvas.width;
-
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: [pdfW, pdfH],
-    compress: true,
-  });
-
-  // Add image, split across pages if needed
-  let heightLeft = imgHeightMM;
-  let position = 0;
-
-  pdf.addImage(imgData, 'JPEG', 0, position, imgWidthMM, imgHeightMM);
-  heightLeft -= pdfH;
-
-  while (heightLeft > 0) {
-    position -= pdfH;
-    pdf.addPage([pdfW, pdfH]);
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidthMM, imgHeightMM);
-    heightLeft -= pdfH;
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc) {
+    document.body.removeChild(iframe);
+    throw new Error('Failed to create print iframe');
   }
 
-  pdf.save(filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+  // Write the document
+  iframeDoc.open();
+  iframeDoc.write(`<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Print Resume</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>${styleContent}</style>
+  <style>${printCSS}</style>
+</head>
+<body>${clone.outerHTML}</body>
+</html>`);
+  iframeDoc.close();
+
+  // ── 5. Wait for fonts & images, then trigger print ──
+  await new Promise<void>((resolve) => {
+    const win = iframe.contentWindow!;
+    const tryPrint = () => {
+      // Wait for fonts
+      if (iframeDoc.fonts && iframeDoc.fonts.ready) {
+        iframeDoc.fonts.ready.then(() => {
+          win.focus();
+          win.print();
+          // Cleanup after print dialog closes
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            resolve();
+          }, 500);
+        });
+      } else {
+        win.focus();
+        win.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          resolve();
+        }, 500);
+      }
+    };
+
+    // Give the iframe time to load styles and render
+    if (win.document.readyState === 'complete') {
+      setTimeout(tryPrint, 300);
+    } else {
+      win.addEventListener('load', () => setTimeout(tryPrint, 300));
+    }
+  });
+}
+
+/**
+ * Collect all stylesheets from the current document as a single CSS string.
+ * Handles both inline <style> and cross-origin <link> (which may throw).
+ */
+function collectStyles(): string {
+  const parts: string[] = [];
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      for (const rule of Array.from(sheet.cssRules)) {
+        parts.push(rule.cssText);
+      }
+    } catch {
+      // Cross-origin stylesheet — skip (Google Fonts are loaded via <link> in iframe)
+    }
+  }
+  return parts.join('\n');
 }
 
 /**

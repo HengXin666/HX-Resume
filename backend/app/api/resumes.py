@@ -69,6 +69,12 @@ async def list_resumes(db: AsyncSession = Depends(get_db)):
     return await resume_service.list_resumes(db)
 
 
+@router.get("/full", response_model=list[ResumeResponse])
+async def list_resumes_full(db: AsyncSession = Depends(get_db)):
+    """Return all resumes with complete data (for initial frontend hydration)."""
+    return await resume_service.list_resumes(db)
+
+
 @router.post("/", response_model=ResumeResponse, status_code=201)
 async def create_resume(data: ResumeCreate, db: AsyncSession = Depends(get_db)):
     existing = await resume_service.get_resume_by_slug(db, data.slug)

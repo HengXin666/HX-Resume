@@ -1,3 +1,34 @@
+/** Header layout style for the basic info section */
+export type HeaderLayout =
+  | 'classic-center'    // 居中：姓名+职位+联系方式横排
+  | 'left-right'        // 左右分栏：姓名左+联系方式右
+  | 'banner-gradient'   // 渐变色 banner
+  | 'sidebar-photo'     // 左侧照片+右侧信息
+  | 'compact-inline'    // 紧凑单行：姓名|联系信息一行流
+  | 'modern-card';      // 现代卡片：头像圆形+下方信息
+
+/** 头像位置 */
+export type AvatarPosition = 'left' | 'right';
+
+/** 头像比例预设 */
+export type AvatarRatio = '1:1' | '2:3' | '3:4' | '4:3';
+
+export const AVATAR_RATIOS: { id: AvatarRatio; name: string; value: number }[] = [
+  { id: '1:1', name: '1:1 正方形', value: 1 },
+  { id: '2:3', name: '2:3 身份证', value: 2 / 3 },
+  { id: '3:4', name: '3:4 标准照', value: 3 / 4 },
+  { id: '4:3', name: '4:3 横向', value: 4 / 3 },
+];
+
+export const HEADER_LAYOUTS: { id: HeaderLayout; name: string; desc: string }[] = [
+  { id: 'classic-center', name: '经典居中', desc: '姓名居中，联系方式横排' },
+  { id: 'left-right', name: '左右分栏', desc: '姓名左侧，联系信息右对齐' },
+  { id: 'banner-gradient', name: '渐变横幅', desc: '全宽渐变色背景' },
+  { id: 'sidebar-photo', name: '照片侧栏', desc: '左侧照片，右侧信息' },
+  { id: 'compact-inline', name: '紧凑单行', desc: '信息紧凑排列，节省空间' },
+  { id: 'modern-card', name: '现代卡片', desc: '居中圆形头像+信息' },
+];
+
 export interface Basics {
   name: string;
   label: string;
@@ -8,6 +39,14 @@ export interface Basics {
   location: Record<string, string>;
   profiles: SocialProfile[];
   avatar: string;
+  /** 基本信息区域布局模板 */
+  header_layout: HeaderLayout;
+  /** 是否显示头部分割线 */
+  show_header_divider: boolean;
+  /** 头像位置：左 or 右 */
+  avatar_position: AvatarPosition;
+  /** 头像展示比例 */
+  avatar_ratio: AvatarRatio;
 }
 
 export interface SocialProfile {
@@ -244,6 +283,10 @@ export const DEFAULT_BASICS: Basics = {
   location: {},
   profiles: [],
   avatar: '',
+  header_layout: 'classic-center',
+  show_header_divider: true,
+  avatar_position: 'left',
+  avatar_ratio: '2:3',
 };
 
 export function createEmptyResume(): ResumeData {

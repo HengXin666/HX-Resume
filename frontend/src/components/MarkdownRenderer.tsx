@@ -16,8 +16,9 @@ export default function MarkdownRenderer({ content, className }: Props) {
   if (!content) return null;
 
   // react-markdown v10 removed className prop — wrap in a div instead
+  const cls = className ? `md-content ${className}` : 'md-content';
   return (
-    <div className={className}>
+    <div className={cls}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={[rehypeRaw]}
@@ -28,9 +29,9 @@ export default function MarkdownRenderer({ content, className }: Props) {
           h1: ({ children }) => <h3 style={{ fontSize: '1.1em', fontWeight: 600, margin: '0.4em 0 0.2em' }}>{children}</h3>,
           h2: ({ children }) => <h4 style={{ fontSize: '1em', fontWeight: 600, margin: '0.3em 0 0.2em' }}>{children}</h4>,
           h3: ({ children }) => <h5 style={{ fontSize: '0.95em', fontWeight: 600, margin: '0.2em 0 0.1em' }}>{children}</h5>,
-          // Style links
+          // Style links — color & underline handled by CSS (.resume-page a)
           a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--resume-link, #2563eb)', textDecoration: 'underline' }}>
+            <a href={href} target="_blank" rel="noopener noreferrer">
               {children}
             </a>
           ),

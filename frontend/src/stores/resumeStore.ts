@@ -85,6 +85,9 @@ interface ResumeStore {
   // Import/Export
   importResume: (data: Partial<ResumeData>) => string;
   setResume: (data: ResumeData) => void;
+
+  // Backend hydration (load resumes from backend when localStorage is empty)
+  loadFromBackend: (resumes: ResumeData[]) => void;
 }
 
 /** Mutate the active resume inside the list immutably */
@@ -459,10 +462,26 @@ export const useResumeStore = create<ResumeStore>()(
         const id = get().importResume(data);
         set({ activeResumeId: id });
       },
+
+      loadFromBackend: (backendResumes) => {
+        if (backendResumes.length === 0) return;
+        // Ensure each resume has the fields localStorage expects (versions, etc.)
+        const hydrated: ResumeData[] = backendResumes.map((r, i) => ({
+          ...createEmptyResume(),
+          ...r,
+          versions: r.versions ?? [],
+          sort_order: r.sort_order ?? i,
+        }));
+        set({
+          resumes: hydrated,
+          activeResumeId: hydrated[0]?.id ?? null,
+        });
+        console.log('[ResumeStore] hydrated', hydrated.length, 'resumes from backend');
+      },
     }),
     {
       name: 'hx-resume-data',
-      version: 7,
+      version: 10,
       partialize: (state) => ({
         resumes: state.resumes,
         activeResumeId: state.activeResumeId,
@@ -552,6 +571,37 @@ export const useResumeStore = create<ResumeStore>()(
             delete sc.accent_color;
             return { ...r, style_config: sc as ResumeData['style_config'] };
           });
+        }
+        if (version < 8 && state.resumes) {
+          // Migrate to v8: add header_layout to basics
+          state.resumes = state.resumes.map((r) => ({
+            ...r,
+            basics: {
+              ...r.basics,
+              header_layout: (r.basics as Record<string, unknown>).header_layout ?? 'classic-center',
+            },
+          }));
+        }
+        if (version < 9 && state.resumes) {
+          // Migrate to v9: add show_header_divider to basics
+          state.resumes = state.resumes.map((r) => ({
+            ...r,
+            basics: {
+              ...r.basics,
+              show_header_divider: (r.basics as Record<string, unknown>).show_header_divider ?? true,
+            },
+          }));
+        }
+        if (version < 10 && state.resumes) {
+          // Migrate to v10: add avatar_position and avatar_ratio to basics
+          state.resumes = state.resumes.map((r) => ({
+            ...r,
+            basics: {
+              ...r.basics,
+              avatar_position: (r.basics as Record<string, unknown>).avatar_position ?? 'left',
+              avatar_ratio: (r.basics as Record<string, unknown>).avatar_ratio ?? '2:3',
+            },
+          }));
         }
         return state;
       },

@@ -26,6 +26,7 @@
   --page-min-height: 297mm;
   width: var(--page-width);
   min-height: var(--page-min-height);
+  box-sizing: border-box;
   background: var(--resume-bg);
   color: var(--resume-text);
   padding: 20mm 24mm;
@@ -92,14 +93,51 @@
   margin-bottom: 12px;
 }
 
-.resume-contact a {
-  color: var(--resume-link);
-  text-decoration: none;
-}
+/* ── Link styles ── */
 
-/* All links inside resume-page use unified blue */
+/* Base: all links in resume use text-decoration underline
+   (border-bottom adds extra height and causes overlap with paragraphs below) */
 .resume-page a {
   color: var(--resume-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--resume-link);
+}
+
+/* Contact area links: inherit parent color, no underline, just clickable */
+.resume-page .resume-contact a,
+.resume-contact a,
+.resume-page .header-contact-link,
+.header-contact-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Project URL link (GitHub etc.) — used in all templates */
+.resume-project-link {
+  font-size: 11px;
+  color: var(--resume-link);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--resume-link);
+  /* Prevent overflow:hidden from clipping descenders (g, y, p, etc.) */
+  padding-bottom: 3px;
+  margin-bottom: -3px;
+  position: relative;
+  z-index: 1;
+}
+
+.resume-project-link svg {
+  flex-shrink: 0;
 }
 
 .resume-summary {
@@ -138,6 +176,15 @@
 .resume-item-desc {
   color: var(--resume-body);
   margin-top: 4px;
+  /* Ensure desc background does not cover descenders (g/y/p) of links above */
+  position: relative;
+}
+
+/* All MarkdownRenderer output inside resume-page shares the same text style */
+.resume-page .md-content {
+  color: var(--resume-body);
+  font-size: inherit;
+  line-height: inherit;
 }
 
 /* Clickable sections in preview — hover highlight */
@@ -181,13 +228,116 @@
   font-weight: 500;
 }
 
-/* Print media query — always light */
+/* ═══════════════════════════════════════════════
+   Paged Preview — Word-like page boundary display
+   ═══════════════════════════════════════════════ */
+
+.paged-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* Hidden measurement & export containers */
+.paged-preview__measure {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.paged-preview__page-wrapper {
+  position: relative;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.18), 0 0 1px rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Inside paged preview, remove .resume-page's own shadow (wrapper provides it) */
+.paged-preview__page-content .resume-page {
+  box-shadow: none !important;
+}
+
+.paged-preview__page-content {
+  position: relative;
+}
+
+/* Page number badge */
+.paged-preview__page-number {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  z-index: 10;
+  font-size: 11px;
+  color: var(--text-muted, #999);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 2px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  font-family: 'Inter', sans-serif;
+  backdrop-filter: blur(4px);
+}
+
+/* Dark mode adjustments */
+.resume-preview-dark .paged-preview__page-wrapper {
+  box-shadow: 0 2px 24px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 240, 255, 0.1);
+}
+
+.resume-preview-dark .paged-preview__page-number {
+  background: rgba(26, 26, 46, 0.85);
+  color: rgba(200, 200, 230, 0.7);
+}
+
+/* Visual page break indicator between pages */
+.paged-preview__page-wrapper + .paged-preview__page-wrapper::before {
+  content: '— 分页线 —';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: -18px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  font-size: 10px;
+  color: var(--text-muted, #aaa);
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════
+   Print Styles — ensures PDF export via window.print()
+   matches the on-screen preview exactly.
+   ═══════════════════════════════════════════════ */
+
+/* Default @page for A4 — overridden in the export iframe for Letter */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
 @media print {
-  body {
-    margin: 0;
-    padding: 0;
-    background: white;
+  *,
+  *::before,
+  *::after {
+    /* Preserve background colors & images in print */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* Force light-mode color variables */
   .resume-page {
     --resume-bg: #ffffff !important;
     --resume-text: #1a1a1a !important;
@@ -202,8 +352,79 @@
     --resume-divider: #ddd !important;
     --resume-tag-bg: #f5f5f5 !important;
     --resume-link: #2563eb !important;
-    box-shadow: none;
-    margin: 0;
-    min-height: auto;
+    --resume-sub: #8a7e6b !important;
+    --resume-sub-dim: #c5b9a8 !important;
+
+    box-shadow: none !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    /* Remove any transform scaling applied in preview */
+    transform: none !important;
+    background: #fff !important;
+  }
+
+  /* Keep links styled and clickable — underline via text-decoration */
+  .resume-page a {
+    color: #2563eb !important;
+    text-decoration: underline !important;
+    text-underline-offset: 2px;
+    text-decoration-color: #2563eb !important;
+  }
+
+  /* Contact links: inherit color, no blue, no underline */
+  .resume-page .resume-contact a,
+  .resume-page .header-contact-link {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  /* Images should render correctly */
+  .resume-page img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+    display: inline-block;
+  }
+
+  /*
+   * Fine-grained page-break control:
+   * - Do NOT put break-inside:avoid on whole sections (.resume-section)
+   *   because a section with many items can exceed a full page, causing
+   *   the browser to push it to the next page and leave a huge blank.
+   * - Instead, avoid breaks inside individual items only.
+   * - Section headings should stay with their first item (break-after: avoid).
+   */
+  .resume-section > h2,
+  .resume-section--clickable > div:first-child {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .resume-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Timeline items in ProfessionalTemplate (no .resume-item class) */
+  [data-item-index] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Remove interactive hover effects in print */
+  .resume-section--clickable:hover {
+    background: transparent !important;
+  }
+
+  /* Hide non-resume UI elements during print */
+  .editor-layout,
+  .module-sidebar,
+  .form-editor-panel,
+  header,
+  .preview-panel__toolbar,
+  .ant-modal,
+  .ant-modal-mask,
+  .ant-message,
+  .ant-tooltip {
+    display: none !important;
   }
 }

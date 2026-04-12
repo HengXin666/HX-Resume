@@ -13,6 +13,12 @@ export async function fetchResumes(): Promise<ResumeData[]> {
   return data;
 }
 
+/** Fetch all resumes with full data (for initial hydration when localStorage is empty). */
+export async function fetchResumesFull(): Promise<ResumeData[]> {
+  const { data } = await api.get('/resumes/full');
+  return data;
+}
+
 export async function fetchResume(id: string): Promise<ResumeData> {
   const { data } = await api.get(`/resumes/${id}`);
   return data;

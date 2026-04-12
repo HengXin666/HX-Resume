@@ -33,7 +33,7 @@ export default function Header({ onExportPDF, onExportHTML }: HeaderProps) {
   const exportMenuItems: MenuProps['items'] = [
     {
       key: 'pdf',
-      label: 'PDF 文件',
+      label: 'PDF 文件（打印导出）',
       icon: <FilePdfOutlined />,
       onClick: onExportPDF,
     },

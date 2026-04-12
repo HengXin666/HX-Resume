@@ -222,9 +222,9 @@ export default function StyleEditor() {
 
         <Form.Item label={sliderLabel('段落间距', style.section_gap, 'px', defaults.section_gap)}>
           <Slider
-            min={4}
+            min={-20}
             max={40}
-            step={2}
+            step={1}
             value={style.section_gap}
             onChange={(value) => updateStyleConfig({ section_gap: value })}
           />

@@ -199,10 +199,10 @@ export default function EditorPage() {
       message.error('无法获取预览内容');
       return;
     }
-    message.loading({ content: '正在生成 PDF...', key: 'pdf' });
+    message.info({ content: '正在打开打印对话框，请选择"另存为 PDF"...', key: 'pdf', duration: 3 });
     try {
       await exportToPDF(el, `${resume?.title ?? 'resume'}.pdf`);
-      message.success({ content: 'PDF 已导出', key: 'pdf' });
+      message.success({ content: 'PDF 导出完成', key: 'pdf' });
     } catch {
       message.error({ content: 'PDF 导出失败', key: 'pdf' });
     }

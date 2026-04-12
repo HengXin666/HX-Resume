@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useResumeStore } from '../stores/resumeStore';
-import { syncResumesToBackend } from '../utils/api';
+import { fetchResumesFull, syncResumesToBackend } from '../utils/api';
 
 const SYNC_DEBOUNCE_MS = 2000;
 const INIT_RETRY_DELAY = 3000;
@@ -9,6 +9,7 @@ const INIT_MAX_RETRIES = 5;
 /**
  * Two-way sync between Zustand (localStorage) store and the backend API.
  *
+ * - On mount: if localStorage is empty, pull resumes from backend first.
  * - On mount: pushes local resumes to backend (localStorage is source of truth).
  * - On store changes: debounced push to backend.
  * - If initial push fails, retries up to INIT_MAX_RETRIES times.
@@ -51,12 +52,34 @@ export function useBackendSync() {
     let retryCount = 0;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
+    /** Try to pull resumes from backend when local store is empty. */
+    async function tryPullFromBackend(): Promise<boolean> {
+      try {
+        const backendResumes = await fetchResumesFull();
+        if (cancelled) return false;
+        if (backendResumes.length > 0) {
+          useResumeStore.getState().loadFromBackend(backendResumes);
+          console.log('[BackendSync] pulled', backendResumes.length, 'resumes from backend');
+          return true;
+        }
+        console.log('[BackendSync] backend has no resumes either');
+        return true; // Nothing on backend is fine
+      } catch (err) {
+        console.warn('[BackendSync] pull from backend failed:', err);
+        return false;
+      }
+    }
+
     async function tryInitialSync(): Promise<boolean> {
       const { resumes, activeResumeId } = useResumeStore.getState();
+
+      // If local store is empty, try to pull from backend first
       if (resumes.length === 0) {
-        console.log('[BackendSync] no local resumes, skipping initial sync');
-        return true; // Nothing to sync is fine
+        console.log('[BackendSync] local store empty, pulling from backend...');
+        return tryPullFromBackend();
       }
+
+      // Local has data → push to backend
       try {
         await syncResumesToBackend(resumes, activeResumeId);
         console.log('[BackendSync] initial sync success:', resumes.length, 'resumes');

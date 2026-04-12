@@ -2,6 +2,7 @@ import type { ResumeData, SectionKey } from '../types/resume';
 import '../styles/resume-print.css';
 import { getVisibleSections, isBuiltinSection, getPageSizeVars, buildHeadingStyle } from './useSectionRenderer';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import HeaderSection from '../components/HeaderSection';
 
 interface Props {
   resume: ResumeData;
@@ -54,7 +55,7 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
           {renderHeading('工作经历')}
           {work.map((w, i) => (
             <div key={i} className="resume-item" data-section="work" data-item-index={i} style={{ marginTop: '10px' }}>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 {w.logo && (
                   <img src={w.logo} alt="" style={{
                     width: '40px', height: '40px',
@@ -101,8 +102,8 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px', marginBottom: '4px', fontSize: '12px', color: 'var(--resume-sub)' }}>
                   <span>{p.keywords.length > 0 ? p.keywords.join(' / ') : ''}</span>
                   {p.url && (
-                    <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--resume-link)', display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor" style={{ flexShrink: 0 }}><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="resume-project-link" onClick={(e) => e.stopPropagation()}>
+                      <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
                       {p.url.replace(/^https?:\/\//, '')}
                     </a>
                   )}
@@ -230,44 +231,26 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
         fontFamily: style.font_family,
         fontSize: `${style.font_size}px`,
         lineHeight: style.line_height,
-        padding: 0,
+        paddingTop: `${style.margin_top}mm`,
+        paddingBottom: `${style.margin_bottom}mm`,
+        paddingLeft: `${style.margin_left}mm`,
+        paddingRight: `${style.margin_right}mm`,
       }}
     >
-      {/* Top gradient banner with name + contact */}
-      <div
-        className="resume-section--clickable"
-        style={{
-          background: `linear-gradient(135deg, ${style.primary_color}, ${style.primary_color}cc)`,
-          color: '#ffffff',
-          padding: '18mm 24mm 12mm',
-          ...sectionClickStyle,
-        }}
-        onClick={handleClick('basics')}
-      >
-        <h1 style={{ fontSize: '26px', fontWeight: 700, margin: 0, color: '#fff' }}>
-          {basics.name || '您的姓名'}
-        </h1>
-        {basics.label && (
-          <div style={{ fontSize: '14px', opacity: 0.85, marginTop: '4px', fontWeight: 400 }}>
-            {basics.label}
-          </div>
-        )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: '8px', fontSize: '12px', opacity: 0.9 }}>
-          {basics.phone && <span>📱 {basics.phone}</span>}
-          {basics.email && <span>📧 {basics.email}</span>}
-          {basics.url && <span>🌐 {basics.url.replace(/^https?:\/\//, '')}</span>}
-          {basics.location?.city && <span>📍 {basics.location.city}</span>}
-        </div>
-      </div>
+      {/* Header — using HeaderSection component */}
+      <HeaderSection
+        basics={basics}
+        style_config={style}
+        sectionClickStyle={sectionClickStyle}
+        onClickBasics={handleClick('basics')}
+      />
 
       {/* Main content — vertical flow */}
-      <div style={{ padding: `14mm ${style.margin_right}mm ${style.margin_bottom}mm ${style.margin_left}mm` }}>
-        {visibleSections.map((key) =>
-          isBuiltinSection(key)
-            ? sectionRenderers[key]()
-            : renderCustomSection(key)
-        )}
-      </div>
+      {visibleSections.map((key) =>
+        isBuiltinSection(key)
+          ? sectionRenderers[key]()
+          : renderCustomSection(key)
+      )}
     </div>
   );
 }
