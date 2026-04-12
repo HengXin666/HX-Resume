@@ -289,7 +289,7 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
           </>
         )}
 
-        <SyncSettings />
+        {import.meta.env.VITE_STATIC_MODE !== 'true' && <SyncSettings />}
 
         <Tooltip title={mode === 'dark' ? '切换亮色' : '切换暗色'}>
           <Button

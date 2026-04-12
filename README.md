@@ -95,3 +95,44 @@ uv run fastapi dev app/main.py
 ## 📄 License
 
 MIT
+
+## 🌐 在线 Demo（GitHub Pages）
+
+本项目支持纯前端模式，无需后端即可使用核心功能（编辑、预览、PDF 导出、JSON 导入导出）。
+
+> 🔗 **在线体验**: 推送到 `main` 分支后自动部署 → `https://<username>.github.io/HX-Resume/`
+
+### 工作原理
+
+- GitHub Actions 自动将前端构建为静态网页（`.github/workflows/deploy-pages.yml`）
+- 构建时启用 `VITE_STATIC_MODE=true`，跳过所有后端 API 调用
+- 使用 `HashRouter`（URL 带 `#`）避免 GitHub Pages 的 SPA 刷新 404
+- 数据存储在浏览器 `localStorage` 中，无需任何服务器
+
+### 静态版本 vs 完整版本
+
+| 功能 | 静态版本 (GitHub Pages) | 完整版本 (含后端) |
+|------|:---:|:---:|
+| 简历编辑 & 预览 | ✅ | ✅ |
+| PDF / HTML / Markdown 导出 | ✅ | ✅ |
+| JSON 导入导出 | ✅ | ✅ |
+| 暗黑模式切换 | ✅ | ✅ |
+| 多简历管理 | ✅ | ✅ |
+| 版本快照 | ✅ | ✅ |
+| 自定义字体上传 | ❌ | ✅ |
+| Git 数据同步 | ❌ | ✅ |
+| 跨设备数据同步 | ❌ | ✅ |
+
+### 本地测试静态构建
+
+```bash
+cd frontend
+pnpm build --mode static
+pnpm preview
+```
+
+### 手动启用 GitHub Pages
+
+1. 进入仓库 **Settings → Pages**
+2. Source 选择 **GitHub Actions**
+3. 推送到 `main` 分支即可触发自动部署

@@ -1,7 +1,7 @@
 import { ConfigProvider, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useEffect } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Route, Routes } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import EditorPage from './pages/EditorPage';
@@ -9,6 +9,9 @@ import AboutPage from './pages/AboutPage';
 import { useThemeStore } from './stores/themeStore';
 import { useBackendSync } from './hooks/useBackendSync';
 import './styles/cyberpunk.css';
+
+/** In static mode (GitHub Pages), use HashRouter to avoid 404 on page refresh */
+const Router = import.meta.env.VITE_STATIC_MODE === 'true' ? HashRouter : BrowserRouter;
 
 export default function App() {
   const { mode } = useThemeStore();
@@ -49,13 +52,13 @@ export default function App() {
     >
       <div className="cyber-bg" />
       <ErrorBoundary>
-        <BrowserRouter>
+        <Router>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/resume/:id" element={<EditorPage />} />
             <Route path="/about" element={<AboutPage />} />
           </Routes>
-        </BrowserRouter>
+        </Router>
       </ErrorBoundary>
     </ConfigProvider>
   );

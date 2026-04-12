@@ -8,6 +8,9 @@ const SYNC_DEBOUNCE_MS = 2000;
 const INIT_RETRY_DELAY = 3000;
 const INIT_MAX_RETRIES = 5;
 
+/** True when running as a pure-frontend static build (GitHub Pages etc.) */
+const STATIC_MODE = import.meta.env.VITE_STATIC_MODE === 'true';
+
 /**
  * Two-way sync between Zustand (localStorage) store and the backend API.
  *
@@ -16,11 +19,12 @@ const INIT_MAX_RETRIES = 5;
  * - On store changes: debounced push to backend.
  * - Also syncs publicResumeStore (redaction config) to backend.
  * - If initial push fails, retries up to INIT_MAX_RETRIES times.
+ * - In STATIC_MODE: skips all backend interaction; localStorage is the only storage.
  */
 export function useBackendSync() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
+  const [initialized, setInitialized] = useState(STATIC_MODE);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Build publicConfig map from the store
@@ -74,6 +78,8 @@ export function useBackendSync() {
 
   // Initial sync with retry — wait for both stores to finish hydration first
   useEffect(() => {
+    if (STATIC_MODE) return; // Pure frontend: skip backend entirely
+
     let cancelled = false;
     let retryCount = 0;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -200,7 +206,7 @@ export function useBackendSync() {
 
   // Subscribe to store changes → debounced push
   useEffect(() => {
-    if (!initialized) return;
+    if (!initialized || STATIC_MODE) return;
 
     const unsub1 = useResumeStore.subscribe(() => {
       debouncedPush();

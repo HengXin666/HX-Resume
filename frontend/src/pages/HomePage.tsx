@@ -251,7 +251,7 @@ export default function HomePage() {
           </span>
         </div>
         <div className="home-header__actions">
-          <SyncSettings />
+          {import.meta.env.VITE_STATIC_MODE !== 'true' && <SyncSettings />}
           <Tooltip title={mode === 'dark' ? '切换亮色' : '切换暗色'}>
             <Button
               type="text"
