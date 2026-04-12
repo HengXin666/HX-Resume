@@ -258,7 +258,7 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
                 }}
                 style={{
                   fontFamily: 'var(--font-display)',
-                  fontSize: '10px',
+                  fontSize: '12px',
                   letterSpacing: '1px',
                   ...(isPublicMode
                     ? { background: 'var(--neon-magenta)', borderColor: 'var(--neon-magenta)' }

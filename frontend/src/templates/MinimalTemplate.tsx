@@ -73,7 +73,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: 600 }}>{w.company}</span>
                     <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
-                      {w.start_date} — {w.end_date || '至今'}
+                      {w.start_date} ~ {w.end_date || '至今'}
                     </span>
                   </div>
                   {(w.department || w.position) && (
@@ -102,7 +102,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 600 }}>{p.name}</span>
                 <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
-                  {p.start_date}{p.end_date ? ` — ${p.end_date}` : ''}
+                  {p.start_date}{p.end_date ? ` ~ ${p.end_date}` : ''}
                 </span>
               </div>
               {(p.keywords.length > 0 || p.url) && (
@@ -134,7 +134,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
                   {e.area && <span style={{ color: 'var(--resume-dim)' }}>{' · '}{e.area}</span>}
                 </div>
                 <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
-                  {e.start_date} — {e.end_date || '至今'}
+                  {e.start_date} ~ {e.end_date || '至今'}
                 </span>
               </div>
               {e.description && (

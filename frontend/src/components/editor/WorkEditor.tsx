@@ -1,8 +1,10 @@
-import { DeleteOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { DeleteOutlined, PlusOutlined, UploadOutlined, ScissorOutlined } from '@ant-design/icons';
 import { Button, Collapse, Form, Input, Upload } from 'antd';
 import type { WorkItem } from '../../types/resume';
 import { useResumeStore } from '../../stores/resumeStore';
 import MarkdownEditor from '../MarkdownEditor';
+import LogoCropEditor from '../LogoCropEditor';
+import { useState } from 'react';
 
 const emptyWork: WorkItem = {
   company: '',
@@ -19,6 +21,9 @@ export default function WorkEditor() {
   const resume = useResumeStore((s) => s.resumes.find((r) => r.id === s.activeResumeId) ?? null);
   const { addWork, removeWork, updateWork } = useResumeStore();
 
+  // 裁剪弹窗状态: index 为目标工作项索引，src 为待裁剪的原始图片
+  const [cropTarget, setCropTarget] = useState<{ index: number; src: string } | null>(null);
+
   if (!resume) return null;
   const { work } = resume;
 
@@ -26,14 +31,23 @@ export default function WorkEditor() {
     updateWork(index, { ...work[index], [field]: value });
   };
 
+  /** 选择文件后不直接保存，而是先打开裁剪弹窗 */
   const handleLogoUpload = (index: number, file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
-      updateField(index, 'logo', dataUrl);
+      setCropTarget({ index, src: dataUrl });
     };
     reader.readAsDataURL(file);
-    return false; // prevent default upload
+    return false;
+  };
+
+  /** 裁剪完成后才真正保存到 store */
+  const handleCropSave = (croppedDataUrl: string) => {
+    if (cropTarget) {
+      updateField(cropTarget.index, 'logo', croppedDataUrl);
+      setCropTarget(null);
+    }
   };
 
   const items = work.map((w, index) => ({
@@ -66,29 +80,31 @@ export default function WorkEditor() {
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '8px' }}>
           <div style={{ flexShrink: 0 }}>
             <Form.Item label="公司 Logo" style={{ marginBottom: 0 }}>
-              <Upload
-                accept="image/*"
-                showUploadList={false}
-                beforeUpload={(file) => handleLogoUpload(index, file)}
-              >
-                {w.logo ? (
-                  <div style={{ width: '64px', height: '64px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: '1px solid var(--border-subtle)' }}>
+              {w.logo ? (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                  <div
+                    style={{
+                      width: '64px', height: '64px', borderRadius: '8px',
+                      overflow: 'hidden', position: 'relative',
+                      border: '1px solid var(--border-subtle)',
+                      flexShrink: 0,
+                    }}
+                  >
                     <img src={w.logo} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
                   </div>
-                ) : (
-                  <Button icon={<UploadOutlined />} size="small">上传</Button>
-                )}
-              </Upload>
-              {w.logo && (
-                <Button
-                  type="link"
-                  danger
-                  size="small"
-                  onClick={() => updateField(index, 'logo', '')}
-                  style={{ padding: 0, fontSize: '10px', marginTop: '2px' }}
-                >
-                  移除
-                </Button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <Upload accept="image/*" showUploadList={false} beforeUpload={(file) => handleLogoUpload(index, file)}>
+                      <Button size="small" type="link" icon={<ScissorOutlined />}>重新选择并裁剪</Button>
+                    </Upload>
+                    <Button size="small" type="link" danger onClick={() => updateField(index, 'logo', '')} style={{ padding: 0 }}>
+                      移除
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Upload accept="image/*" showUploadList={false} beforeUpload={(file) => handleLogoUpload(index, file)}>
+                  <Button icon={<UploadOutlined />} size="small">选择并裁剪 Logo</Button>
+                </Upload>
               )}
             </Form.Item>
           </div>
@@ -158,6 +174,14 @@ export default function WorkEditor() {
       >
         添加工作经历
       </Button>
+      {cropTarget && (
+        <LogoCropEditor
+          open={!!cropTarget}
+          src={cropTarget.src}
+          onSave={handleCropSave}
+          onCancel={() => setCropTarget(null)}
+        />
+      )}
     </div>
   );
 }

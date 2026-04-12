@@ -4,7 +4,7 @@ import { usePublicResumeStore } from '../stores/publicResumeStore';
 import { fetchResumesFull, syncResumesToBackend } from '../utils/api';
 import type { PublicResumeConfig } from '../types/resume';
 
-const SYNC_DEBOUNCE_MS = 2000;
+const SYNC_DEBOUNCE_MS = 8000;
 const INIT_RETRY_DELAY = 3000;
 const INIT_MAX_RETRIES = 5;
 
@@ -76,7 +76,7 @@ export function useBackendSync() {
     }, SYNC_DEBOUNCE_MS);
   }, [pushToBackend]);
 
-  // Initial sync with retry — wait for both stores to finish hydration first
+  // Initial sync with retry ~ wait for both stores to finish hydration first
   useEffect(() => {
     if (STATIC_MODE) return; // Pure frontend: skip backend entirely
 

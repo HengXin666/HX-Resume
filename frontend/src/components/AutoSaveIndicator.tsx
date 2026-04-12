@@ -64,7 +64,7 @@ export default function AutoSaveIndicator() {
 
   if (!resume) return null;
 
-  const iconSize = '11px';
+  const iconSize = '14px';
 
   return (
     <Tooltip
@@ -75,8 +75,8 @@ export default function AutoSaveIndicator() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '5px',
-          fontSize: '11px',
+          gap: '6px',
+          fontSize: '13px',
           fontFamily: 'var(--font-mono)',
           color: 'var(--text-muted)',
           transition: 'color 0.3s, opacity 0.3s',

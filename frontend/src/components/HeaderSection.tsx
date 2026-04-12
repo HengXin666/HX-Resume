@@ -210,7 +210,7 @@ function LayoutClassicCenter({ basics, pc, style, className, onClick }: LayoutPr
         }}>
           {avatarEl}
           <div style={{ flex: 1, textAlign: 'center' }}>
-            <h1 style={{ color: pc, marginBottom: '2px', fontSize: '24px' }}>
+            <h1 style={{ marginBottom: '2px', fontSize: '24px' }}>
               {basics.name || '您的姓名'}
             </h1>
             {basics.label && (
@@ -234,7 +234,7 @@ function LayoutClassicCenter({ basics, pc, style, className, onClick }: LayoutPr
         </div>
       ) : (
         <div style={{ textAlign: 'center' }}>
-          <h1 style={{ color: pc, marginBottom: '2px', fontSize: '24px' }}>
+          <h1 style={{ marginBottom: '2px', fontSize: '24px' }}>
             {basics.name || '您的姓名'}
           </h1>
           {basics.label && (
@@ -278,7 +278,7 @@ function LayoutLeftRight({ basics, pc, style, className, onClick }: LayoutProps)
 
   const nameBlock = (
     <div>
-      <h1 style={{ fontSize: '28px', fontWeight: 800, color: pc, margin: 0, letterSpacing: '1px' }}>
+      <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0, letterSpacing: '1px' }}>
         {basics.name || '您的姓名'}
       </h1>
       {basics.label && (
@@ -354,7 +354,7 @@ function LayoutBannerGradient({ basics, pc, style, className, onClick }: LayoutP
       }}>
         {avatarEl}
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: '26px', fontWeight: 700, margin: 0, color: pc }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 700, margin: 0 }}>
             {basics.name || '您的姓名'}
           </h1>
           {basics.label && (
@@ -416,7 +416,7 @@ function LayoutSidebarPhoto({ basics, pc, style, className, onClick }: LayoutPro
       }}>
         {avatarEl}
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: '26px', fontWeight: 700, color: pc, margin: 0 }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 700, margin: 0 }}>
             {basics.name || '您的姓名'}
           </h1>
           {basics.label && (
@@ -468,7 +468,7 @@ function LayoutCompactInline({ basics, pc, style, className, onClick }: LayoutPr
           flexDirection: pos === 'right' ? 'row-reverse' : 'row',
         }}>
           {avatarEl}
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: pc, margin: 0, whiteSpace: 'nowrap' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, whiteSpace: 'nowrap' }}>
             {basics.name || '您的姓名'}
           </h1>
         </div>
@@ -516,7 +516,7 @@ function LayoutModernCard({ basics, pc, style, className, onClick }: LayoutProps
       }}>
         {avatarEl}
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: pc, margin: 0 }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0 }}>
             {basics.name || '您的姓名'}
           </h1>
           {basics.label && (

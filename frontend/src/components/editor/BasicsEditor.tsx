@@ -1,34 +1,53 @@
 import { Input, Form, Upload, message, Switch } from 'antd';
-import { CameraOutlined, DeleteOutlined } from '@ant-design/icons';
+import { CameraOutlined, DeleteOutlined, ScissorOutlined } from '@ant-design/icons';
 import { useResumeStore } from '../../stores/resumeStore';
 import MarkdownEditor from '../MarkdownEditor';
 import { HEADER_LAYOUTS, AVATAR_RATIOS } from '../../types/resume';
 import type { HeaderLayout, AvatarPosition, AvatarRatio } from '../../types/resume';
 import type { RcFile } from 'antd/es/upload/interface';
+import AvatarCropEditor from '../AvatarCropEditor';
+import { useState } from 'react';
 
 export default function BasicsEditor() {
   const resume = useResumeStore((s) => s.resumes.find((r) => r.id === s.activeResumeId) ?? null);
   const { updateBasics, setTitle } = useResumeStore();
 
+  // 头像裁剪弹窗状态
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+
   if (!resume) return null;
   const { basics } = resume;
 
+  /** 选择文件后先打开裁剪弹窗，不直接保存 */
   const handleAvatarUpload = (file: RcFile) => {
     const isImage = file.type.startsWith('image/');
     if (!isImage) {
       message.error('请上传图片文件');
       return false;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      message.error('图片大小不能超过 2MB');
+    if (file.size > 5 * 1024 * 1024) {
+      message.error('图片大小不能超过 5MB');
       return false;
     }
     const reader = new FileReader();
     reader.onload = (e) => {
-      updateBasics({ avatar: e.target?.result as string });
+      setCropSrc(e.target?.result as string);
     };
     reader.readAsDataURL(file);
     return false; // prevent default upload
+  };
+
+  /** 裁剪完成后保存到 store */
+  const handleCropSave = (croppedDataUrl: string) => {
+    updateBasics({ avatar: croppedDataUrl });
+    setCropSrc(null);
+  };
+
+  /** 对已有头像重新裁剪 */
+  const handleReCrop = () => {
+    if (basics.avatar) {
+      setCropSrc(basics.avatar);
+    }
   };
 
   const handleRemoveAvatar = () => {
@@ -97,7 +116,7 @@ export default function BasicsEditor() {
             onChange={(checked) => updateBasics({ show_header_divider: checked })}
             size="small"
           />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted, #999)', marginLeft: '8px' }}>
+          <span style={{ fontSize: '13px', color: 'var(--text-muted, #999)', marginLeft: '8px' }}>
             {basics.show_header_divider !== false ? '显示' : '隐藏'}
           </span>
         </Form.Item>
@@ -205,26 +224,51 @@ export default function BasicsEditor() {
               </div>
             </Upload>
             {basics.avatar && (
-              <button
-                type="button"
-                onClick={handleRemoveAvatar}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                  padding: '4px 8px', borderRadius: '4px', fontSize: '11px',
-                  border: '1px solid var(--border-subtle, #e5e5e5)',
-                  background: 'transparent',
-                  color: 'var(--neon-magenta, #ff2d6d)',
-                  cursor: 'pointer',
-                }}
-              >
-                <DeleteOutlined /> 移除
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <button
+                  type="button"
+                  onClick={handleReCrop}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    padding: '4px 8px', borderRadius: '4px', fontSize: '11px',
+                    border: '1px solid var(--border-subtle, #e5e5e5)',
+                    background: 'transparent',
+                    color: 'var(--neon-cyan, #00f0ff)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ScissorOutlined /> 裁剪
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    padding: '4px 8px', borderRadius: '4px', fontSize: '11px',
+                    border: '1px solid var(--border-subtle, #e5e5e5)',
+                    background: 'transparent',
+                    color: 'var(--neon-magenta, #ff2d6d)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <DeleteOutlined /> 移除
+                </button>
+              </div>
             )}
             <span style={{ fontSize: '10px', color: 'var(--text-muted, #999)' }}>
-              支持 JPG/PNG，≤ 2MB
+              支持 JPG/PNG，≤ 5MB
             </span>
           </div>
         </Form.Item>
+
+        {/* 头像裁剪弹窗 */}
+        <AvatarCropEditor
+          open={!!cropSrc}
+          src={cropSrc || ''}
+          avatarRatio={basics.avatar_ratio}
+          onSave={handleCropSave}
+          onCancel={() => setCropSrc(null)}
+        />
 
         <Form.Item label="姓名">
           <Input

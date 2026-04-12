@@ -67,7 +67,7 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="resume-item-header">
                     <span style={{ fontWeight: 600, fontSize: '15px' }}>{w.company}</span>
-                    <span className="resume-item-date">{w.start_date} — {w.end_date || '至今'}</span>
+                    <span className="resume-item-date">{w.start_date} ~ {w.end_date || '至今'}</span>
                   </div>
                   {(w.department || w.position) && (
                     <div style={{ color: 'var(--resume-sub)', fontSize: '13px', marginTop: '2px' }}>
@@ -95,7 +95,7 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
               <div className="resume-item-header">
                 <span style={{ fontWeight: 600, fontSize: '15px' }}>{p.name}</span>
                 <span className="resume-item-date">
-                  {p.start_date}{p.end_date ? ` — ${p.end_date}` : ''}
+                  {p.start_date}{p.end_date ? ` ~ ${p.end_date}` : ''}
                 </span>
               </div>
               {(p.keywords.length > 0 || p.url) && (
@@ -124,9 +124,9 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
               <div className="resume-item-header">
                 <div>
                   <span style={{ fontWeight: 600 }}>{e.institution}</span>
-                  {e.area && <span style={{ color: 'var(--resume-muted)' }}> — {e.area} · {e.study_type}</span>}
+                  {e.area && <span style={{ color: 'var(--resume-muted)' }}> ~ {e.area} · {e.study_type}</span>}
                 </div>
-                <span className="resume-item-date">{e.start_date} — {e.end_date || '至今'}</span>
+                <span className="resume-item-date">{e.start_date} ~ {e.end_date || '至今'}</span>
               </div>
               {e.description && (
                 <div style={{ marginTop: '4px' }}>

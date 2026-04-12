@@ -1,5 +1,5 @@
 import { EditOutlined, EyeOutlined } from '@ant-design/icons';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import MarkdownRenderer from './MarkdownRenderer';
 
 interface Props {
@@ -16,6 +16,7 @@ interface Props {
  * - Tab key inserts a tab (or 2 spaces) instead of moving focus
  * - Ctrl+B wraps selection in bold, Ctrl+I in italic
  * - Enter inside a list auto-continues the list marker
+ * - Auto-resizes height based on content
  */
 export default function MarkdownEditor({
   value,
@@ -26,6 +27,22 @@ export default function MarkdownEditor({
 }: Props) {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  /** Auto-resize textarea height based on content */
+  const autoResize = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    // Reset height to auto so scrollHeight recalculates correctly
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+  }, []);
+
+  // Auto-resize on value change and initial mount
+  useEffect(() => {
+    if (mode === 'edit') {
+      autoResize();
+    }
+  }, [value, mode, autoResize]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -122,6 +139,7 @@ export default function MarkdownEditor({
           placeholder={placeholder}
           rows={rows}
           spellCheck={false}
+          style={{ minHeight: `${rows * 1.6 * 13 + 20}px` }}
         />
       ) : (
         <div className="md-editor__preview" style={{ minHeight: `${rows * 22}px` }}>

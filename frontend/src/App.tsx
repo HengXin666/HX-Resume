@@ -29,12 +29,14 @@ export default function App() {
         algorithm: mode === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
           colorPrimary: '#00f0ff',
-          colorBgContainer: mode === 'dark' ? '#16162588' : '#e2dfda',
-          colorBgElevated: mode === 'dark' ? '#1a1a2e' : '#e2dfda',
-          colorBorder: mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
-          colorText: mode === 'dark' ? '#e0e0f0' : '#2c2a28',
-          colorTextSecondary: mode === 'dark' ? '#a0a0c0' : '#504d49',
-          fontFamily: "'Inter', 'Noto Sans SC', sans-serif",
+          colorBgContainer: mode === 'dark' ? '#16162588' : '#ffffff',
+          colorBgElevated: mode === 'dark' ? '#1a1a2e' : '#faf9f7',
+          colorBorder: mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.10)',
+          colorText: mode === 'dark' ? '#e0e0f0' : '#1c1b19',
+          colorTextSecondary: mode === 'dark' ? '#a0a0c0' : '#47453f',
+          fontFamily: mode === 'dark'
+            ? "'Inter', 'Noto Sans SC', sans-serif"
+            : "'Microsoft YaHei', 'SimHei', 'PingFang SC', 'Noto Sans SC', sans-serif",
           borderRadius: 6,
         },
         components: {

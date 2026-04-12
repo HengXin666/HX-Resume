@@ -119,7 +119,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <span style={{ fontWeight: 700, fontSize: '15px' }}>{w.company}</span>
                       <span style={{ fontSize: '12px', color: 'var(--resume-dim)', fontWeight: 500 }}>
-                        {w.start_date} — {w.end_date || '至今'}
+                        {w.start_date} ~ {w.end_date || '至今'}
                       </span>
                     </div>
                     {(w.department || w.position) && (
@@ -159,7 +159,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <span style={{ fontWeight: 700, fontSize: '15px' }}>{p.name}</span>
                   <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
-                    {p.start_date}{p.end_date ? ` — ${p.end_date}` : ''}
+                    {p.start_date}{p.end_date ? ` ~ ${p.end_date}` : ''}
                   </span>
                 </div>
                 {(p.keywords.length > 0 || p.url) && (
@@ -206,7 +206,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
                     {e.area && <span style={{ color: 'var(--resume-muted)', marginLeft: '8px' }}>{e.area}{e.study_type && ` · ${e.study_type}`}</span>}
                   </div>
                   <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
-                    {e.start_date} — {e.end_date || '至今'}
+                    {e.start_date} ~ {e.end_date || '至今'}
                   </span>
                 </div>
                 {e.description && (
