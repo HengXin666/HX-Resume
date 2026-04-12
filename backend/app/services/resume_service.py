@@ -39,6 +39,7 @@ async def create_resume(db: AsyncSession, data: ResumeCreate) -> Resume:
         section_visibility=_dump_field(data.section_visibility),
         section_order=data.section_order,
         sort_order=data.sort_order,
+        public_config=_dump_field(data.public_config),
         source="local",
     )
     db.add(resume)
@@ -73,7 +74,7 @@ async def update_resume(db: AsyncSession, resume_id: str, data: ResumeUpdate) ->
     for key in (
         "basics", "education", "work", "projects", "awards",
         "languages", "interests", "custom_sections", "style_config",
-        "section_visibility",
+        "section_visibility", "public_config",
     ):
         if key in update_data:
             raw = getattr(data, key)
@@ -117,6 +118,7 @@ async def upsert_resume(db: AsyncSession, resume_id: str, data: ResumeCreate) ->
         existing.section_visibility = _dump_field(data.section_visibility)
         existing.section_order = data.section_order
         existing.sort_order = data.sort_order
+        existing.public_config = _dump_field(data.public_config)
         existing.source = "local"
         await db.commit()
         await db.refresh(existing)
@@ -140,6 +142,7 @@ async def upsert_resume(db: AsyncSession, resume_id: str, data: ResumeCreate) ->
             section_visibility=_dump_field(data.section_visibility),
             section_order=data.section_order,
             sort_order=data.sort_order,
+            public_config=_dump_field(data.public_config),
             source="local",
         )
         db.add(resume)

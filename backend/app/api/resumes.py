@@ -138,6 +138,7 @@ async def export_resume_json(resume_id: str, db: AsyncSession = Depends(get_db))
         "style_config": resume.style_config,
         "section_visibility": resume.section_visibility,
         "section_order": resume.section_order,
+        "public_config": resume.public_config,
     }
 
 

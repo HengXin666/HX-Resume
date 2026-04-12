@@ -1,5 +1,6 @@
 import {
   DownloadOutlined,
+  EyeOutlined,
   FileMarkdownOutlined,
   FilePdfOutlined,
   GithubOutlined,
@@ -16,17 +17,25 @@ import type { MenuProps } from 'antd';
 import { useRef, useState } from 'react';
 import { useThemeStore } from '../stores/themeStore';
 import { useResumeStore } from '../stores/resumeStore';
-import { downloadFile, exportToMarkdown } from '../utils/exporters';
+import { usePublicResumeStore } from '../stores/publicResumeStore';
+import { downloadFile, exportToMarkdown, exportToMarkdownRedacted } from '../utils/exporters';
 
 interface HeaderProps {
   onExportPDF: () => void;
   onExportHTML: () => void;
+  /** 公开简历模式下的导出回调 */
+  onPublicExportPDF?: () => void;
+  onPublicExportHTML?: () => void;
+  /** 切换公开简历模式（由 EditorPage 处理面板联动） */
+  onTogglePublicMode?: () => void;
 }
 
-export default function Header({ onExportPDF, onExportHTML }: HeaderProps) {
+export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, onPublicExportHTML, onTogglePublicMode }: HeaderProps) {
   const { mode, toggleTheme } = useThemeStore();
   const resume = useResumeStore((s) => s.resumes.find((r) => r.id === s.activeResumeId) ?? null);
   const { importResume, saveVersion, restoreVersion, deleteVersion } = useResumeStore();
+  const { config: publicConfig, setEnabled: setPublicEnabled } = usePublicResumeStore();
+  const isPublicMode = publicConfig.enabled;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showVersions, setShowVersions] = useState(false);
 
@@ -98,6 +107,33 @@ export default function Header({ onExportPDF, onExportHTML }: HeaderProps) {
       message.info('内容未变化，无需保存快照');
     }
   };
+
+  /** 公开简历专用导出菜单 */
+  const publicExportMenuItems: MenuProps['items'] = [
+    {
+      key: 'pub-pdf',
+      label: '公开版 PDF（打印导出）',
+      icon: <FilePdfOutlined />,
+      onClick: onPublicExportPDF,
+    },
+    {
+      key: 'pub-md',
+      label: '公开版 Markdown',
+      icon: <FileMarkdownOutlined />,
+      onClick: () => {
+        if (!resume) return;
+        const md = exportToMarkdownRedacted(resume, publicConfig);
+        downloadFile(md, `${resume.title}_公开版.md`, 'text/markdown');
+        message.success('公开版 Markdown 已导出');
+      },
+    },
+    {
+      key: 'pub-html',
+      label: '公开版 HTML 页面',
+      icon: <Html5Outlined />,
+      onClick: onPublicExportHTML,
+    },
+  ];
 
   return (
     <header
@@ -191,6 +227,54 @@ export default function Header({ onExportPDF, onExportHTML }: HeaderProps) {
             导出
           </Button>
         </Dropdown>
+
+        {/* 公开简历模式 */}
+        {resume && (
+          <>
+            <Tooltip title={isPublicMode ? '退出公开简历模式' : '进入公开简历模式'}>
+              <Button
+                type={isPublicMode ? 'primary' : 'text'}
+                icon={<EyeOutlined />}
+                size="small"
+                onClick={() => {
+                  if (onTogglePublicMode) {
+                    onTogglePublicMode();
+                  } else {
+                    setPublicEnabled(!isPublicMode);
+                  }
+                }}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '10px',
+                  letterSpacing: '1px',
+                  ...(isPublicMode
+                    ? { background: 'var(--neon-magenta)', borderColor: 'var(--neon-magenta)' }
+                    : { color: 'var(--text-secondary)' }),
+                }}
+              >
+                {isPublicMode ? '公开模式' : '公开'}
+              </Button>
+            </Tooltip>
+            {isPublicMode && (
+              <Dropdown menu={{ items: publicExportMenuItems }} trigger={['click']}>
+                <Button
+                  type="primary"
+                  icon={<UploadOutlined />}
+                  size="small"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '10px',
+                    letterSpacing: '1px',
+                    background: 'var(--neon-magenta)',
+                    borderColor: 'var(--neon-magenta)',
+                  }}
+                >
+                  导出公开版
+                </Button>
+              </Dropdown>
+            )}
+          </>
+        )}
 
         <Tooltip title={mode === 'dark' ? '切换亮色' : '切换暗色'}>
           <Button

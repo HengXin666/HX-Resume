@@ -31,6 +31,9 @@ class Resume(Base):
     section_order: Mapped[list | None] = mapped_column(JSON, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
+    # Public resume (redaction) config
+    public_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
     # Metadata
     source: Mapped[str] = mapped_column(String(20), default="local")  # local / github
     github_path: Mapped[str | None] = mapped_column(Text, nullable=True)

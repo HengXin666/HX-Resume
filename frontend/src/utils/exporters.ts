@@ -1,4 +1,4 @@
-import type { ResumeData } from '../types/resume';
+import type { ResumeData, PublicResumeConfig } from '../types/resume';
 
 /**
  * Export the resume preview DOM element as a PDF file.
@@ -9,7 +9,7 @@ import type { ResumeData } from '../types/resume';
  * and page dimensions are controlled by @page CSS rules.
  *
  * Replaces the old html2canvas + jsPDF approach which produced a rasterised
- * image — losing links, mis-sizing pages, and sometimes dropping images.
+ * image ~ losing links, mis-sizing pages, and sometimes dropping images.
  */
 export async function exportToPDF(
   element: HTMLElement,
@@ -174,7 +174,7 @@ function collectStyles(): string {
         parts.push(rule.cssText);
       }
     } catch {
-      // Cross-origin stylesheet — skip (Google Fonts are loaded via <link> in iframe)
+      // Cross-origin stylesheet ~ skip (Google Fonts are loaded via <link> in iframe)
     }
   }
   return parts.join('\n');
@@ -232,7 +232,7 @@ export function exportToMarkdown(resume: ResumeData): string {
     lines.push('');
     for (const e of education) {
       lines.push(`### ${e.institution}`);
-      lines.push(`${e.area} — ${e.study_type}`);
+      lines.push(`${e.area} ~ ${e.study_type}`);
       lines.push(`*${e.start_date} - ${e.end_date || '至今'}*`);
       if (e.description) {
         lines.push('');
@@ -270,6 +270,29 @@ export function exportToMarkdown(resume: ResumeData): string {
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Generate Markdown from resume data with redacted text replaced.
+ * Redacted items have their originalText replaced with "██████" placeholders.
+ */
+export function exportToMarkdownRedacted(
+  resume: ResumeData,
+  config: PublicResumeConfig,
+): string {
+  // 先生成普通 Markdown
+  let md = exportToMarkdown(resume);
+
+  // 对每个打码项，替换所有出现的原文
+  for (const item of config.redactedItems) {
+    if (!item.originalText) continue;
+    const replacement = item.replacement || '█'.repeat(Math.max(item.originalText.length, 3));
+    // 全局替换（转义正则特殊字符）
+    const escaped = item.originalText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    md = md.replace(new RegExp(escaped, 'g'), replacement);
+  }
+
+  return md;
 }
 
 /**

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useResumeStore } from '../stores/resumeStore';
+import { usePublicResumeStore } from '../stores/publicResumeStore';
 import { fetchResumesFull, syncResumesToBackend } from '../utils/api';
+import type { PublicResumeConfig } from '../types/resume';
 
 const SYNC_DEBOUNCE_MS = 2000;
 const INIT_RETRY_DELAY = 3000;
@@ -12,6 +14,7 @@ const INIT_MAX_RETRIES = 5;
  * - On mount: if localStorage is empty, pull resumes from backend first.
  * - On mount: pushes local resumes to backend (localStorage is source of truth).
  * - On store changes: debounced push to backend.
+ * - Also syncs publicResumeStore (redaction config) to backend.
  * - If initial push fails, retries up to INIT_MAX_RETRIES times.
  */
 export function useBackendSync() {
@@ -20,6 +23,28 @@ export function useBackendSync() {
   const [initialized, setInitialized] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Build publicConfig map from the store
+  const buildPublicConfigMap = useCallback((): Record<string, PublicResumeConfig> => {
+    const publicStore = usePublicResumeStore.getState();
+    const { resumes, activeResumeId } = useResumeStore.getState();
+
+    // Save current active config to map first
+    if (activeResumeId) {
+      publicStore.saveCurrentToMap(activeResumeId);
+    }
+
+    const map: Record<string, PublicResumeConfig> = { ...publicStore.getConfigMap() };
+
+    // Ensure all resume IDs have an entry (even if null/empty)
+    for (const r of resumes) {
+      if (!(r.id in map)) {
+        map[r.id] = { enabled: false, redactedItems: [], defaultStyle: 'mosaic', defaultSolidColor: '#333333' };
+      }
+    }
+
+    return map;
+  }, []);
+
   // Push current store state to backend
   const pushToBackend = useCallback(async () => {
     const { resumes, activeResumeId } = useResumeStore.getState();
@@ -27,7 +52,8 @@ export function useBackendSync() {
     setSyncing(true);
     setLastSyncError(null);
     try {
-      await syncResumesToBackend(resumes, activeResumeId);
+      const publicConfigMap = buildPublicConfigMap();
+      await syncResumesToBackend(resumes, activeResumeId, publicConfigMap);
       console.log('[BackendSync] pushed', resumes.length, 'resumes to backend');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Sync failed';
@@ -36,7 +62,7 @@ export function useBackendSync() {
     } finally {
       setSyncing(false);
     }
-  }, []);
+  }, [buildPublicConfigMap]);
 
   // Debounced push
   const debouncedPush = useCallback(() => {
@@ -46,11 +72,25 @@ export function useBackendSync() {
     }, SYNC_DEBOUNCE_MS);
   }, [pushToBackend]);
 
-  // Initial sync with retry
+  // Initial sync with retry — wait for both stores to finish hydration first
   useEffect(() => {
     let cancelled = false;
     let retryCount = 0;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    /** Wait for publicResumeStore persist hydration to complete. */
+    function waitPublicHydrated(): Promise<void> {
+      return new Promise((resolve) => {
+        if (usePublicResumeStore.persist.hasHydrated()) {
+          resolve();
+          return;
+        }
+        const unsub = usePublicResumeStore.persist.onFinishHydration(() => {
+          unsub();
+          resolve();
+        });
+      });
+    }
 
     /** Try to pull resumes from backend when local store is empty. */
     async function tryPullFromBackend(): Promise<boolean> {
@@ -59,6 +99,22 @@ export function useBackendSync() {
         if (cancelled) return false;
         if (backendResumes.length > 0) {
           useResumeStore.getState().loadFromBackend(backendResumes);
+
+          // Load public configs from backend data (uses merge — won't overwrite local)
+          const publicStore = usePublicResumeStore.getState();
+          for (const r of backendResumes) {
+            const pc = (r as Record<string, unknown>).public_config as PublicResumeConfig | null;
+            if (pc && pc.redactedItems && pc.redactedItems.length > 0) {
+              publicStore.loadFromBackend(r.id, pc);
+            }
+          }
+
+          // Load the active resume's config
+          const activeId = useResumeStore.getState().activeResumeId;
+          if (activeId) {
+            publicStore.switchResume(activeId);
+          }
+
           console.log('[BackendSync] pulled', backendResumes.length, 'resumes from backend');
           return true;
         }
@@ -67,6 +123,24 @@ export function useBackendSync() {
       } catch (err) {
         console.warn('[BackendSync] pull from backend failed:', err);
         return false;
+      }
+    }
+
+    /** Merge backend public_config for resumes we already have locally. */
+    async function mergeBackendPublicConfigs(): Promise<void> {
+      try {
+        const backendResumes = await fetchResumesFull();
+        if (cancelled) return;
+        const publicStore = usePublicResumeStore.getState();
+        for (const r of backendResumes) {
+          const pc = (r as Record<string, unknown>).public_config as PublicResumeConfig | null;
+          if (pc && pc.redactedItems && pc.redactedItems.length > 0) {
+            publicStore.loadFromBackend(r.id, pc);
+          }
+        }
+      } catch {
+        // Non-critical: local data still works
+        console.warn('[BackendSync] failed to merge backend public configs');
       }
     }
 
@@ -79,9 +153,13 @@ export function useBackendSync() {
         return tryPullFromBackend();
       }
 
-      // Local has data → push to backend
+      // Local has data → merge any backend public_config we don't have locally,
+      // then push to backend (local is source of truth)
+      await mergeBackendPublicConfigs();
+
       try {
-        await syncResumesToBackend(resumes, activeResumeId);
+        const publicConfigMap = buildPublicConfigMap();
+        await syncResumesToBackend(resumes, activeResumeId, publicConfigMap);
         console.log('[BackendSync] initial sync success:', resumes.length, 'resumes');
         return true;
       } catch (err) {
@@ -91,6 +169,10 @@ export function useBackendSync() {
     }
 
     async function init() {
+      // Wait for publicResumeStore to finish hydrating from localStorage
+      await waitPublicHydrated();
+      if (cancelled) return;
+
       const success = await tryInitialSync();
       if (cancelled) return;
 
@@ -120,12 +202,17 @@ export function useBackendSync() {
   useEffect(() => {
     if (!initialized) return;
 
-    const unsub = useResumeStore.subscribe(() => {
+    const unsub1 = useResumeStore.subscribe(() => {
+      debouncedPush();
+    });
+
+    const unsub2 = usePublicResumeStore.subscribe(() => {
       debouncedPush();
     });
 
     return () => {
-      unsub();
+      unsub1();
+      unsub2();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [initialized, debouncedPush]);

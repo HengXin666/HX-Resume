@@ -5,6 +5,7 @@ import {
   CodeOutlined,
   DeleteOutlined,
   DownOutlined,
+  EyeOutlined,
   FormatPainterOutlined,
   GlobalOutlined,
   HolderOutlined,
@@ -24,6 +25,7 @@ import type { ErrorInfo, ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
 import ResumePreview from '../components/ResumePreview';
+import RedactedPreview from '../components/RedactedPreview';
 import AwardsEditor from '../components/editor/AwardsEditor';
 import BasicsEditor from '../components/editor/BasicsEditor';
 import CustomSectionEditor from '../components/editor/CustomSectionEditor';
@@ -31,10 +33,12 @@ import EducationEditor from '../components/editor/EducationEditor';
 import InterestsEditor from '../components/editor/InterestsEditor';
 import LanguagesEditor from '../components/editor/LanguagesEditor';
 import ProjectsEditor from '../components/editor/ProjectsEditor';
+import PublicModeEditor from '../components/editor/PublicModeEditor';
 import SkillsEditor from '../components/editor/SkillsEditor';
 import StyleEditor from '../components/editor/StyleEditor';
 import WorkEditor from '../components/editor/WorkEditor';
 import { useResumeStore } from '../stores/resumeStore';
+import { usePublicResumeStore } from '../stores/publicResumeStore';
 import type { ResumeData, SectionKey } from '../types/resume';
 import { DEFAULT_SECTION_ORDER, DEFAULT_SECTION_VISIBILITY } from '../types/resume';
 import { exportToHTML, exportToPDF } from '../utils/exporters';
@@ -138,6 +142,7 @@ export default function EditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const previewRef = useRef<HTMLDivElement>(null);
+  const publicPreviewRef = useRef<HTMLDivElement>(null);
   const previewPanelRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(0.55);
   const {
@@ -145,22 +150,40 @@ export default function EditorPage() {
     toggleSectionVisibility, setSectionVisibility, removeCustomSection,
   } = useResumeStore();
   const resume = useResumeStore((s) => s.resumes.find((r) => r.id === s.activeResumeId) ?? null);
+  const isPublicMode = usePublicResumeStore((s) => s.config.enabled);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['basics']));
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   const dragItemRef = useRef<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activePanel, setActivePanel] = useState<'editor' | 'style'>('editor');
+  const [activePanel, setActivePanel] = useState<'editor' | 'style' | 'public'>('editor');
 
-  // Wait for zustand persist hydration before doing anything
+  // Wait for zustand persist hydration before doing anything (both stores)
   useEffect(() => {
-    const unsub = useResumeStore.persist.onFinishHydration(() => {
-      setHydrated(true);
+    let resumeHydrated = useResumeStore.persist.hasHydrated();
+    let publicHydrated = usePublicResumeStore.persist.hasHydrated();
+
+    const checkReady = () => {
+      if (resumeHydrated && publicHydrated) {
+        setHydrated(true);
+      }
+    };
+
+    const unsub1 = useResumeStore.persist.onFinishHydration(() => {
+      resumeHydrated = true;
+      checkReady();
     });
-    if (useResumeStore.persist.hasHydrated()) {
-      setHydrated(true);
-    }
-    return () => unsub();
+    const unsub2 = usePublicResumeStore.persist.onFinishHydration(() => {
+      publicHydrated = true;
+      checkReady();
+    });
+
+    checkReady();
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
   }, []);
 
   // Dynamic preview scaling — recalculate when preview panel resizes
@@ -186,7 +209,14 @@ export default function EditorPage() {
     if (!id || !hydrated) return;
     const found = resumes.find((r) => r.id === id);
     if (found) {
+      // 保存前一个简历的打码配置
+      const prevId = useResumeStore.getState().activeResumeId;
+      if (prevId && prevId !== id) {
+        usePublicResumeStore.getState().saveCurrentToMap(prevId);
+      }
       setActiveResume(id);
+      // 加载目标简历的打码配置
+      usePublicResumeStore.getState().switchResume(id);
     } else {
       message.error('简历不存在');
       navigate('/', { replace: true });
@@ -216,6 +246,35 @@ export default function EditorPage() {
     }
     exportToHTML(el, resume?.title ?? 'resume');
     message.success('HTML 已导出');
+  }, [resume?.title]);
+
+  /** 公开版 PDF 导出（从打码预览面板抓取） */
+  const handlePublicExportPDF = useCallback(async () => {
+    const container = publicPreviewRef.current ?? previewRef.current;
+    const el = container?.querySelector('.resume-page') as HTMLElement;
+    if (!el) {
+      message.error('无法获取公开版预览内容');
+      return;
+    }
+    message.info({ content: '正在打开打印对话框，请选择"另存为 PDF"...', key: 'pdf', duration: 3 });
+    try {
+      await exportToPDF(el, `${resume?.title ?? 'resume'}_公开版.pdf`);
+      message.success({ content: '公开版 PDF 导出完成', key: 'pdf' });
+    } catch {
+      message.error({ content: '公开版 PDF 导出失败', key: 'pdf' });
+    }
+  }, [resume?.title]);
+
+  /** 公开版 HTML 导出 */
+  const handlePublicExportHTML = useCallback(() => {
+    const container = publicPreviewRef.current ?? previewRef.current;
+    const el = container?.querySelector('.resume-page') as HTMLElement;
+    if (!el) {
+      message.error('无法获取公开版预览内容');
+      return;
+    }
+    exportToHTML(el, `${resume?.title ?? 'resume'}_公开版`);
+    message.success('公开版 HTML 已导出');
   }, [resume?.title]);
 
   const toggleExpand = (key: string) => {
@@ -417,7 +476,17 @@ export default function EditorPage() {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header onExportPDF={handleExportPDF} onExportHTML={handleExportHTML} />
+      <Header
+        onExportPDF={handleExportPDF}
+        onExportHTML={handleExportHTML}
+        onPublicExportPDF={handlePublicExportPDF}
+        onPublicExportHTML={handlePublicExportHTML}
+        onTogglePublicMode={() => {
+          const next = !isPublicMode;
+          usePublicResumeStore.getState().setEnabled(next);
+          setActivePanel(next ? 'public' : 'editor');
+        }}
+      />
 
       {/* ── Three Panel Layout ── */}
       <div className="editor-layout">
@@ -506,19 +575,56 @@ export default function EditorPage() {
                   <span className="module-sidebar__label">样式设置</span>
                 </div>
               </div>
+
+              {/* Public resume mode shortcut */}
+              <div
+                className={`module-sidebar__item module-sidebar__item--style ${activePanel === 'public' ? 'module-sidebar__item--active' : ''}`}
+                onClick={() => {
+                  if (isPublicMode) {
+                    // 已开启 → 关闭公开模式，切回编辑面板
+                    usePublicResumeStore.getState().setEnabled(false);
+                    setActivePanel('editor');
+                  } else {
+                    // 未开启 → 开启公开模式，切到公开面板
+                    usePublicResumeStore.getState().setEnabled(true);
+                    setActivePanel('public');
+                  }
+                }}
+                style={isPublicMode ? { borderLeft: '2px solid var(--neon-magenta)' } : undefined}
+              >
+                <div className="module-sidebar__item-left">
+                  <span className="module-sidebar__icon" style={isPublicMode ? { color: 'var(--neon-magenta)' } : undefined}>
+                    <EyeOutlined />
+                  </span>
+                  <span className="module-sidebar__label">公开简历</span>
+                </div>
+                {isPublicMode && (
+                  <div className="module-sidebar__item-right">
+                    <span className="module-sidebar__dot module-sidebar__dot--filled" style={{ background: 'var(--neon-magenta)' }} />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
 
         {/* Panel 2: Center Form Editor */}
         <div className="form-editor-panel">
-          {/* Progress bar */}
-          <div className="form-editor__progress">
-            <div className="form-editor__progress-bar">
-              <div className="form-editor__progress-fill" style={{ width: `${completionInfo.percent}%` }} />
+          {/* Progress bar / mode indicator */}
+          {activePanel === 'public' ? (
+            <div className="form-editor__progress" style={{ background: 'rgba(255,0,128,0.08)', borderBottom: '1px solid rgba(255,0,128,0.2)' }}>
+              <span className="form-editor__progress-text" style={{ color: 'var(--neon-magenta)', fontWeight: 600 }}>
+                🔒 打码模式 · 在右侧预览区选中文本即可打码
+              </span>
             </div>
-            <span className="form-editor__progress-text">{completionInfo.percent}% 完成</span>
-          </div>
+          ) : (
+            <div className="form-editor__progress">
+              <div className="form-editor__progress-bar">
+                <div className="form-editor__progress-fill" style={{ width: `${completionInfo.percent}%` }} />
+              </div>
+              <span className="form-editor__progress-text">{completionInfo.percent}% 完成</span>
+            </div>
+          )}
 
           <div className="form-editor__scroll">
             {activePanel === 'editor' ? (
@@ -589,7 +695,7 @@ export default function EditorPage() {
                   添加自定义模块
                 </Button>
               </>
-            ) : (
+            ) : activePanel === 'style' ? (
               /* Style / Template Settings panel */
               <div className="module-card">
                 <div className="module-card__header module-card__header--active">
@@ -599,6 +705,23 @@ export default function EditorPage() {
                 <div className="module-card__body">
                   <SectionErrorBoundary name="样式与模板">
                     <StyleEditor />
+                  </SectionErrorBoundary>
+                </div>
+              </div>
+            ) : (
+              /* Public Resume / Redact Settings panel */
+              <div className="module-card">
+                <div className="module-card__header module-card__header--active"
+                  style={{ borderLeft: '3px solid var(--neon-magenta)' }}
+                >
+                  <span className="module-card__icon" style={{ color: 'var(--neon-magenta)' }}>
+                    <EyeOutlined />
+                  </span>
+                  <span className="module-card__title">公开简历 · 打码设置</span>
+                </div>
+                <div className="module-card__body">
+                  <SectionErrorBoundary name="公开简历设置">
+                    <PublicModeEditor />
                   </SectionErrorBoundary>
                 </div>
               </div>
@@ -616,7 +739,11 @@ export default function EditorPage() {
             }}
           >
             <SectionErrorBoundary name="简历预览">
-              <ResumePreview ref={previewRef} onSectionClick={scrollToSection} />
+              {isPublicMode ? (
+                <RedactedPreview ref={publicPreviewRef} />
+              ) : (
+                <ResumePreview ref={previewRef} onSectionClick={scrollToSection} />
+              )}
             </SectionErrorBoundary>
           </div>
         </div>

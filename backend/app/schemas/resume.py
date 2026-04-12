@@ -130,6 +130,21 @@ class SectionVisibility(BaseModel):
     interests: bool = False
 
 
+class RedactItem(BaseModel):
+    id: str = ""
+    originalText: str = ""
+    style: str = "mosaic"
+    solidColor: str = "#333333"
+    replacement: str = ""
+
+
+class PublicResumeConfig(BaseModel):
+    enabled: bool = False
+    redactedItems: list[RedactItem] = Field(default_factory=list)
+    defaultStyle: str = "mosaic"
+    defaultSolidColor: str = "#333333"
+
+
 # --- API schemas ---
 
 
@@ -150,6 +165,7 @@ class ResumeCreate(BaseModel):
     section_visibility: SectionVisibility | None = None
     section_order: list[str] | None = None
     sort_order: int = 0
+    public_config: PublicResumeConfig | None = None
 
 
 class ResumeUpdate(BaseModel):
@@ -168,6 +184,7 @@ class ResumeUpdate(BaseModel):
     section_visibility: SectionVisibility | None = None
     section_order: list[str] | None = None
     sort_order: int | None = None
+    public_config: PublicResumeConfig | None = None
 
 
 class ResumeResponse(BaseModel):
@@ -188,6 +205,7 @@ class ResumeResponse(BaseModel):
     section_visibility: dict[str, Any] | None
     section_order: list[str] | None
     sort_order: int
+    public_config: dict[str, Any] | None
     source: str
     created_at: datetime
     updated_at: datetime

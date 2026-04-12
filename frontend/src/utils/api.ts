@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ResumeData } from '../types/resume';
+import type { ResumeData, PublicResumeConfig } from '../types/resume';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
@@ -52,7 +52,8 @@ export async function deleteResumeApi(id: string): Promise<void> {
  */
 export async function syncResumesToBackend(
   resumes: ResumeData[],
-  activeResumeId: string | null
+  activeResumeId: string | null,
+  publicConfigMap?: Record<string, PublicResumeConfig>,
 ): Promise<{ synced: number; ids: string[] }> {
   const payload = {
     resumes: resumes.map((r) => ({
@@ -74,6 +75,7 @@ export async function syncResumesToBackend(
         section_visibility: r.section_visibility,
         section_order: r.section_order,
         sort_order: r.sort_order,
+        public_config: publicConfigMap?.[r.id] ?? null,
       },
     })),
     active_resume_id: activeResumeId,

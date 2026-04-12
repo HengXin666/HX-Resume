@@ -253,6 +253,44 @@ export interface ResumeData {
 
 export type TemplateId = 'classic' | 'modern' | 'minimal' | 'professional' | 'creative' | 'cyberpunk';
 
+// ── Public Resume (Redaction) Types ──
+
+/** 打码样式 */
+export type RedactStyle = 'mosaic' | 'solid';
+
+/** 单条打码记录（基于用户选中的文本） */
+export interface RedactItem {
+  /** 唯一 ID */
+  id: string;
+  /** 被选中的原始文本 */
+  originalText: string;
+  /** 打码样式 */
+  style: RedactStyle;
+  /** 纯色打码时的颜色 */
+  solidColor: string;
+  /** 替换文本（临时编辑时使用，为空则使用打码占位符） */
+  replacement: string;
+}
+
+/** 公开简历配置 */
+export interface PublicResumeConfig {
+  /** 是否启用公开简历模式 */
+  enabled: boolean;
+  /** 打码记录列表 */
+  redactedItems: RedactItem[];
+  /** 全局默认打码样式 */
+  defaultStyle: RedactStyle;
+  /** 全局默认纯色颜色 */
+  defaultSolidColor: string;
+}
+
+export const DEFAULT_PUBLIC_RESUME_CONFIG: PublicResumeConfig = {
+  enabled: false,
+  redactedItems: [],
+  defaultStyle: 'mosaic',
+  defaultSolidColor: '#333333',
+};
+
 export const DEFAULT_STYLE_CONFIG: StyleConfig = {
   font_family: "'Noto Sans SC', 'Inter', sans-serif",
   font_size: 14,
