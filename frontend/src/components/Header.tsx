@@ -10,11 +10,16 @@ import {
   MoonOutlined,
   SaveOutlined,
   SunOutlined,
+  SwapOutlined,
   UploadOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { Button, Dropdown, Empty, Modal, Space, Tooltip, message } from 'antd';
 import type { MenuProps } from 'antd';
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AutoSaveIndicator from './AutoSaveIndicator';
+import VersionDiffModal from './VersionDiffModal';
 import { useThemeStore } from '../stores/themeStore';
 import { useResumeStore } from '../stores/resumeStore';
 import { usePublicResumeStore } from '../stores/publicResumeStore';
@@ -32,12 +37,15 @@ interface HeaderProps {
 
 export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, onPublicExportHTML, onTogglePublicMode }: HeaderProps) {
   const { mode, toggleTheme } = useThemeStore();
+  const navigate = useNavigate();
   const resume = useResumeStore((s) => s.resumes.find((r) => r.id === s.activeResumeId) ?? null);
   const { importResume, saveVersion, restoreVersion, deleteVersion } = useResumeStore();
   const { config: publicConfig, setEnabled: setPublicEnabled } = usePublicResumeStore();
   const isPublicMode = publicConfig.enabled;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showVersions, setShowVersions] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
+  const [diffVersionId, setDiffVersionId] = useState<string | undefined>();
 
   const exportMenuItems: MenuProps['items'] = [
     {
@@ -158,24 +166,28 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
             fontSize: '16px',
             fontWeight: 800,
             letterSpacing: '2px',
+            cursor: 'pointer',
           }}
           className="neon-text"
+          onClick={() => navigate('/')}
+          title="返回主页"
         >
           HX::RESUME
         </div>
         <span
+          className="home-header__version"
           style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
-            color: 'var(--text-muted)',
-            border: '1px solid var(--border-subtle)',
-            padding: '1px 5px',
-            borderRadius: '3px',
+            cursor: 'pointer',
           }}
+          onClick={() => navigate('/about')}
+          title="关于 HX-Resume"
         >
-          v0.3.0
+          v0.4.0
         </span>
       </div>
+
+      {/* Auto-save status — centered between logo and actions */}
+      {resume && <AutoSaveIndicator />}
 
       {/* Actions */}
       <Space size="small">
@@ -289,7 +301,7 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
           <Button
             type="text"
             icon={<GithubOutlined />}
-            onClick={() => window.open('https://github.com', '_blank')}
+            onClick={() => window.open('https://github.com/HengXin666/HX-Resume', '_blank')}
             style={{ color: 'var(--text-secondary)', fontSize: '14px' }}
           />
         </Tooltip>
@@ -306,8 +318,30 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
           open={showVersions}
           onCancel={() => setShowVersions(false)}
           footer={null}
-          width={480}
+          width={520}
         >
+          {/* 存储位置提示 */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '8px',
+            padding: '8px 12px',
+            marginBottom: '12px',
+            background: 'rgba(245, 255, 48, 0.06)',
+            border: '1px solid rgba(245, 255, 48, 0.15)',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '11px',
+            color: 'var(--neon-yellow)',
+            lineHeight: '1.5',
+          }}>
+            <WarningOutlined style={{ marginTop: '2px', flexShrink: 0 }} />
+            <span>
+              版本快照存储在<strong>当前浏览器本地</strong>（localStorage）。
+              清除浏览器数据、更换浏览器或设备后，版本记录将丢失。
+              重要版本请及时导出 JSON 备份。
+            </span>
+          </div>
+
           {resume.versions.length === 0 ? (
             <Empty description="暂无历史版本" />
           ) : (
@@ -332,6 +366,19 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '4px' }}>
+                    <Tooltip title="与当前版本对比预览">
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<SwapOutlined />}
+                        onClick={() => {
+                          setDiffVersionId(ver.id);
+                          setShowVersions(false);
+                          setShowDiff(true);
+                        }}
+                        style={{ color: 'var(--neon-cyan)', fontSize: '12px' }}
+                      />
+                    </Tooltip>
                     <Dropdown
                       menu={{
                         items: [
@@ -362,6 +409,16 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
             </div>
           )}
         </Modal>
+      )}
+
+      {/* Version diff modal */}
+      {resume && (
+        <VersionDiffModal
+          open={showDiff}
+          onClose={() => setShowDiff(false)}
+          resume={resume}
+          initialVersionId={diffVersionId}
+        />
       )}
     </header>
   );

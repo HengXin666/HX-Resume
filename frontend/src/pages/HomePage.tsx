@@ -90,7 +90,7 @@ function SortableResumeCard({ resume }: { resume: ResumeData }) {
         className="home-resume-card__content"
         onClick={() => {
           useResumeStore.getState().setActiveResume(resume.id);
-          navigate(`/${resume.id}`);
+          navigate(`/resume/${resume.id}`);
         }}
       >
         {/* Thumbnail placeholder */}
@@ -134,7 +134,7 @@ function SortableResumeCard({ resume }: { resume: ResumeData }) {
             icon={<EditOutlined />}
             onClick={() => {
               useResumeStore.getState().setActiveResume(resume.id);
-              navigate(`/${resume.id}`);
+              navigate(`/resume/${resume.id}`);
             }}
           />
         </Tooltip>
@@ -204,7 +204,7 @@ export default function HomePage() {
 
   const handleCreateResume = () => {
     const id = createResume();
-    navigate(`/${id}`);
+    navigate(`/resume/${id}`);
   };
 
   const handleImportJSON = () => fileInputRef.current?.click();
@@ -218,7 +218,7 @@ export default function HomePage() {
         const data = JSON.parse(event.target?.result as string);
         const id = importResume(data);
         message.success('简历已导入');
-        navigate(`/${id}`);
+        navigate(`/resume/${id}`);
       } catch {
         message.error('文件格式错误，请导入有效的 JSON 文件');
       }
@@ -232,8 +232,22 @@ export default function HomePage() {
       {/* Header */}
       <header className="home-header">
         <div className="home-header__brand">
-          <div className="home-header__logo neon-text">HX::RESUME</div>
-          <span className="home-header__version">v0.3.0</span>
+          <div
+            className="home-header__logo neon-text"
+            style={{ cursor: 'pointer' }}
+            onClick={() => navigate('/')}
+            title="返回主页"
+          >
+            HX::RESUME
+          </div>
+          <span
+            className="home-header__version"
+            style={{ cursor: 'pointer' }}
+            onClick={() => navigate('/about')}
+            title="关于 HX-Resume"
+          >
+            v0.4.0
+          </span>
         </div>
         <div className="home-header__actions">
           <Tooltip title={mode === 'dark' ? '切换亮色' : '切换暗色'}>
@@ -248,7 +262,7 @@ export default function HomePage() {
             <Button
               type="text"
               icon={<GithubOutlined />}
-              onClick={() => window.open('https://github.com', '_blank')}
+              onClick={() => window.open('https://github.com/HengXin666/HX-Resume', '_blank')}
               style={{ color: 'var(--text-secondary)', fontSize: '16px' }}
             />
           </Tooltip>

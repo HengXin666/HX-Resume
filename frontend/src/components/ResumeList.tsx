@@ -4,6 +4,8 @@ import {
   HistoryOutlined,
   HolderOutlined,
   PlusOutlined,
+  SwapOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import {
   DndContext,
@@ -25,6 +27,7 @@ import { Button, Dropdown, Empty, Modal, Popconfirm, Tooltip } from 'antd';
 import { useState } from 'react';
 import type { ResumeData } from '../types/resume';
 import { useResumeStore } from '../stores/resumeStore';
+import VersionDiffModal from './VersionDiffModal';
 
 function SortableResumeCard({ resume }: { resume: ResumeData }) {
   const {
@@ -39,6 +42,8 @@ function SortableResumeCard({ resume }: { resume: ResumeData }) {
   } = useResumeStore();
 
   const [showVersions, setShowVersions] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
+  const [diffVersionId, setDiffVersionId] = useState<string | undefined>();
   const isActive = activeResumeId === resume.id;
 
   const {
@@ -138,8 +143,29 @@ function SortableResumeCard({ resume }: { resume: ResumeData }) {
         open={showVersions}
         onCancel={() => setShowVersions(false)}
         footer={null}
-        width={480}
+        width={520}
       >
+        {/* 存储位置提示 */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '8px',
+          padding: '8px 12px',
+          marginBottom: '12px',
+          background: 'rgba(245, 255, 48, 0.06)',
+          border: '1px solid rgba(245, 255, 48, 0.15)',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: '11px',
+          color: 'var(--neon-yellow)',
+          lineHeight: '1.5',
+        }}>
+          <WarningOutlined style={{ marginTop: '2px', flexShrink: 0 }} />
+          <span>
+            版本快照存储在<strong>当前浏览器本地</strong>（localStorage）。
+            清除浏览器数据、更换浏览器或设备后将丢失。
+          </span>
+        </div>
+
         {resume.versions.length === 0 ? (
           <Empty description="暂无历史版本" />
         ) : (
@@ -166,6 +192,19 @@ function SortableResumeCard({ resume }: { resume: ResumeData }) {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '4px' }}>
+                  <Tooltip title="与当前版本对比预览">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<SwapOutlined />}
+                      onClick={() => {
+                        setDiffVersionId(ver.id);
+                        setShowVersions(false);
+                        setShowDiff(true);
+                      }}
+                      style={{ color: 'var(--neon-cyan)', fontSize: '12px' }}
+                    />
+                  </Tooltip>
                   <Dropdown
                     menu={{
                       items: [
@@ -197,6 +236,14 @@ function SortableResumeCard({ resume }: { resume: ResumeData }) {
           </div>
         )}
       </Modal>
+
+      {/* Version diff modal */}
+      <VersionDiffModal
+        open={showDiff}
+        onClose={() => setShowDiff(false)}
+        resume={resume}
+        initialVersionId={diffVersionId}
+      />
     </>
   );
 }

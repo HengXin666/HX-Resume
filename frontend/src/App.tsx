@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import EditorPage from './pages/EditorPage';
+import AboutPage from './pages/AboutPage';
 import { useThemeStore } from './stores/themeStore';
 import { useBackendSync } from './hooks/useBackendSync';
 import './styles/cyberpunk.css';
@@ -25,11 +26,11 @@ export default function App() {
         algorithm: mode === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
           colorPrimary: '#00f0ff',
-          colorBgContainer: mode === 'dark' ? '#16162588' : '#ffffff',
-          colorBgElevated: mode === 'dark' ? '#1a1a2e' : '#ffffff',
+          colorBgContainer: mode === 'dark' ? '#16162588' : '#e2dfda',
+          colorBgElevated: mode === 'dark' ? '#1a1a2e' : '#e2dfda',
           colorBorder: mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
-          colorText: mode === 'dark' ? '#e0e0f0' : '#1a1a2e',
-          colorTextSecondary: mode === 'dark' ? '#a0a0c0' : '#4a4a6a',
+          colorText: mode === 'dark' ? '#e0e0f0' : '#2c2a28',
+          colorTextSecondary: mode === 'dark' ? '#a0a0c0' : '#504d49',
           fontFamily: "'Inter', 'Noto Sans SC', sans-serif",
           borderRadius: 6,
         },
@@ -51,7 +52,8 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/:id" element={<EditorPage />} />
+            <Route path="/resume/:id" element={<EditorPage />} />
+            <Route path="/about" element={<AboutPage />} />
           </Routes>
         </BrowserRouter>
       </ErrorBoundary>
