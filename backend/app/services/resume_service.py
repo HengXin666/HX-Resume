@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.resume import Resume
 from app.schemas.resume import ResumeCreate, ResumeUpdate
-from app.services.github_service import github_service
 
 
 def _dump_field(val: Any) -> Any:
@@ -151,50 +150,4 @@ async def upsert_resume(db: AsyncSession, resume_id: str, data: ResumeCreate) ->
         return resume
 
 
-async def sync_from_github(db: AsyncSession) -> list[dict[str, Any]]:
-    """Sync resume data from GitHub private repo into SQLite."""
-    remote_files = await github_service.list_resumes()
-    synced = []
 
-    for file_info in remote_files:
-        data = await github_service.fetch_file(file_info["path"])
-        if not data:
-            continue
-
-        slug = file_info["name"].replace(".json", "")
-        existing = await get_resume_by_slug(db, slug)
-
-        if existing:
-            for key, value in data.items():
-                if hasattr(existing, key) and key not in ("id", "created_at"):
-                    setattr(existing, key, value)
-            existing.source = "github"
-            existing.github_path = file_info["path"]
-        else:
-            resume = Resume(
-                id=str(uuid.uuid4()),
-                title=data.get("title", slug),
-                slug=slug,
-                template_id=data.get("template_id", "classic"),
-                basics=data.get("basics"),
-                education=data.get("education"),
-                work=data.get("work"),
-                skills_text=data.get("skills_text", ""),
-                projects=data.get("projects"),
-                awards=data.get("awards"),
-                languages=data.get("languages"),
-                interests=data.get("interests"),
-                custom_sections=data.get("custom_sections"),
-                style_config=data.get("style_config"),
-                section_visibility=data.get("section_visibility"),
-                section_order=data.get("section_order"),
-                sort_order=data.get("sort_order", 0),
-                source="github",
-                github_path=file_info["path"],
-            )
-            db.add(resume)
-
-        synced.append({"slug": slug, "path": file_info["path"]})
-
-    await db.commit()
-    return synced

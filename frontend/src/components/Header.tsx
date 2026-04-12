@@ -19,6 +19,7 @@ import type { MenuProps } from 'antd';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AutoSaveIndicator from './AutoSaveIndicator';
+import SyncSettings from './SyncSettings';
 import VersionDiffModal from './VersionDiffModal';
 import { useThemeStore } from '../stores/themeStore';
 import { useResumeStore } from '../stores/resumeStore';
@@ -287,6 +288,8 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
             )}
           </>
         )}
+
+        <SyncSettings />
 
         <Tooltip title={mode === 'dark' ? '切换亮色' : '切换暗色'}>
           <Button

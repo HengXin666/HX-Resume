@@ -8,6 +8,10 @@ router.json
 backend/*.db
 backend/.env
 backend/.venv/
+backend/data/
+
+# sync_config.json 随本项目提交，不排除
+!backend/sync_config.json
 
 # Frontend
 frontend/node_modules/

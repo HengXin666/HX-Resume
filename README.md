@@ -12,7 +12,7 @@
 - **多格式导出** — 支持 PDF / Markdown / HTML 导出
 - **导入导出** — JSON 格式数据导入导出
 - **暗黑模式** — 赛博朋克风格 + 亮色模式切换
-- **私有数据** — 简历数据存储于 GitHub 私有仓库，代码开源但数据私有
+- **Git 同步** — 通过本地 git 命令将数据同步至私有仓库，代码开源但数据私有
 - **后端 API** — FastAPI + SQLite 提供数据存储与展示
 
 ## 🏗️ 技术栈
@@ -25,7 +25,7 @@
 | 后端 | FastAPI + SQLAlchemy |
 | 数据库 | SQLite |
 | PDF 导出 | html2canvas + jsPDF |
-| 私有数据 | GitHub API (私有仓库) |
+| 数据同步 | 本地 Git 命令 |
 
 ## 📁 项目结构
 
@@ -48,6 +48,7 @@ HX-Resume/
 │   │   ├── schemas/       # Pydantic 模型
 │   │   ├── services/      # 业务逻辑
 │   │   └── core/          # 核心配置
+│   ├── data/              # 本地数据目录（git 同步用，已 gitignore）
 │   └── ...
 └── README.md
 ```
@@ -70,16 +71,26 @@ uv sync
 uv run fastapi dev app/main.py
 ```
 
-## 🔐 私有数据说明
+## 🔐 私有数据同步
 
-本项目代码开源，但简历数据存储在 GitHub 私有仓库中。后端通过 GitHub API 获取私有数据，确保个人信息安全。
+本项目代码开源，但简历数据可通过**本地 git 命令**同步到你的私有仓库中，确保个人信息安全。
 
-需要配置环境变量：
+### 工作原理
 
-```env
-GITHUB_TOKEN=your_github_personal_access_token
-GITHUB_REPO=your_username/your_private_repo
-```
+- 后端 `data/` 目录作为独立的 git 仓库，存放简历 JSON 数据
+- 该目录已通过 `.gitignore` 排除，不会提交到本项目的开源仓库
+- 通过前端「同步设置」面板配置私有仓库地址后，即可一键 Push / Pull
+
+### 使用方式
+
+1. 在 GitHub / Gitee 等平台创建一个**私有仓库**（如 `my-resume-data`）
+2. 确保本机 git 已配置好 SSH 密钥或 HTTPS 凭据
+3. 在前端 Header 中点击 ⚙️ 齿轮图标，打开「数据同步设置」
+4. 填入私有仓库地址（如 `https://github.com/username/my-resume-data.git`）
+5. 点击 **Pull** 拉取已有数据 或 **Push** 推送本地数据
+
+> **无需配置任何 Token** — 直接使用本机 git 凭据进行认证。
+> 仓库地址配置存储在 `backend/data/sync_config.json` 中，公开也无安全风险（别人没有你仓库的权限）。
 
 ## 📄 License
 

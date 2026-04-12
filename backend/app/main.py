@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.resumes import router as resumes_router
 from app.api.fonts import router as fonts_router
+from app.api.sync import router as sync_router
 from app.core.config import settings
 from app.core.database import init_db
 
@@ -31,6 +32,7 @@ app.add_middleware(
 
 app.include_router(resumes_router, prefix="/api")
 app.include_router(fonts_router, prefix="/api")
+app.include_router(sync_router, prefix="/api")
 
 
 @app.get("/api/health")

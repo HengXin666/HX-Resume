@@ -55,12 +55,6 @@ async def sync_resumes(body: SyncRequest, db: AsyncSession = Depends(get_db)):
     return {"synced": len(upserted), "ids": upserted}
 
 
-@router.post("/sync-github")
-async def sync_from_github(db: AsyncSession = Depends(get_db)):
-    synced = await resume_service.sync_from_github(db)
-    return {"synced": synced, "count": len(synced)}
-
-
 # ── Standard CRUD ──
 
 

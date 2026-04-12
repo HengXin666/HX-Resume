@@ -84,8 +84,50 @@ export async function syncResumesToBackend(
   return data;
 }
 
-export async function syncFromGithub(): Promise<{ synced: unknown[]; count: number }> {
-  const { data } = await api.post('/resumes/sync-github');
+// ── Git 同步 APIs ──
+
+export interface SyncConfig {
+  repo_url: string;
+  branch: string;
+}
+
+export interface SyncResult {
+  ok: boolean;
+  message?: string;
+  error?: string;
+  detail?: string;
+}
+
+export interface GitStatus {
+  initialized: boolean;
+  configured: boolean;
+  branch?: string;
+  has_uncommitted_changes?: boolean;
+  changes?: string;
+}
+
+export async function getSyncConfig(): Promise<SyncConfig> {
+  const { data } = await api.get('/sync/config');
+  return data;
+}
+
+export async function updateSyncConfig(config: SyncConfig): Promise<{ ok: boolean; config: SyncConfig }> {
+  const { data } = await api.put('/sync/config', config);
+  return data;
+}
+
+export async function gitPull(): Promise<SyncResult> {
+  const { data } = await api.post('/sync/pull');
+  return data;
+}
+
+export async function gitPush(): Promise<SyncResult> {
+  const { data } = await api.post('/sync/push');
+  return data;
+}
+
+export async function getGitStatus(): Promise<GitStatus> {
+  const { data } = await api.get('/sync/status');
   return data;
 }
 

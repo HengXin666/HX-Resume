@@ -10,11 +10,6 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./hx_resume.db"
 
-    # GitHub private repo
-    GITHUB_TOKEN: str = ""
-    GITHUB_REPO: str = ""  # e.g. "username/private-resume-data"
-    GITHUB_BRANCH: str = "main"
-
     # CORS – cover all Vite dev-server ports (auto-increments when 5173 is busy)
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",
@@ -32,3 +27,6 @@ class Settings(BaseSettings):
 settings = Settings()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# data/ 目录 — 本地 git 仓库，用于同步简历数据到私有远程仓库
+DATA_DIR = BASE_DIR / "data"

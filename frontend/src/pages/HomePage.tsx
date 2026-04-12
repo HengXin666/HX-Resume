@@ -36,6 +36,7 @@ import type { ResumeData } from '../types/resume';
 import { useResumeStore } from '../stores/resumeStore';
 import { useThemeStore } from '../stores/themeStore';
 import { downloadFile, exportToMarkdown } from '../utils/exporters';
+import SyncSettings from '../components/SyncSettings';
 
 function timeAgo(date: string): string {
   const diff = Date.now() - new Date(date).getTime();
@@ -250,6 +251,7 @@ export default function HomePage() {
           </span>
         </div>
         <div className="home-header__actions">
+          <SyncSettings />
           <Tooltip title={mode === 'dark' ? '切换亮色' : '切换暗色'}>
             <Button
               type="text"
