@@ -1,4 +1,206 @@
+import html2canvas from 'html2canvas';
 import type { ResumeData, PublicResumeConfig } from '../types/resume';
+
+/** Light-mode CSS variable overrides for export */
+const LIGHT_MODE_VARS: Record<string, string> = {
+  '--resume-bg': '#ffffff',
+  '--resume-text': '#1a1a1a',
+  '--resume-h1': '#111',
+  '--resume-h2': '#222',
+  '--resume-h3': '#333',
+  '--resume-muted': '#555',
+  '--resume-dim': '#888',
+  '--resume-body': '#444',
+  '--resume-contact': '#555',
+  '--resume-highlight': '#444',
+  '--resume-divider': '#ddd',
+  '--resume-tag-bg': '#f5f5f5',
+  '--resume-link': '#2563eb',
+  '--resume-sub': '#8a7e6b',
+  '--resume-sub-dim': '#c5b9a8',
+};
+
+/**
+ * html2canvas does NOT support CSS `object-fit`. To work around this we wrap
+ * each <img> that uses object-fit inside a `overflow:hidden` container <div>,
+ * then manually compute the image's rendered width/height/position to emulate
+ * the contain / cover behaviour. The <img> tag itself is preserved (NOT
+ * replaced with background-image) so html2canvas renders it at full
+ * resolution — background-image is known to produce blurry results.
+ */
+function fixObjectFitImages(root: HTMLElement): void {
+  const imgs = root.querySelectorAll('img');
+  imgs.forEach((img) => {
+    const fit = img.style.objectFit || getComputedStyle(img).objectFit;
+    if (!fit || fit === 'fill') return;
+
+    // Container dimensions (the box the image lives in)
+    const boxW = img.offsetWidth || parseInt(img.style.width) || 40;
+    const boxH = img.offsetHeight || parseInt(img.style.height) || 40;
+
+    // We need the image's natural size to compute the correct crop/scale.
+    // Since all images are base64 data-URLs the image is already loaded.
+    const natW = img.naturalWidth || boxW;
+    const natH = img.naturalHeight || boxH;
+
+    const boxRatio = boxW / boxH;
+    const imgRatio = natW / natH;
+
+    let renderW: number;
+    let renderH: number;
+
+    if (fit === 'contain' || fit === 'scale-down') {
+      // Shrink so the ENTIRE image fits inside the box (letterbox)
+      if (imgRatio > boxRatio) {
+        renderW = boxW;
+        renderH = boxW / imgRatio;
+      } else {
+        renderH = boxH;
+        renderW = boxH * imgRatio;
+      }
+    } else {
+      // 'cover': enlarge so the image COVERS the box entirely (crop)
+      if (imgRatio > boxRatio) {
+        renderH = boxH;
+        renderW = boxH * imgRatio;
+      } else {
+        renderW = boxW;
+        renderH = boxW / imgRatio;
+      }
+    }
+
+    // Centre the image inside the box
+    const left = (boxW - renderW) / 2;
+    const top = (boxH - renderH) / 2;
+
+    // Build wrapper div with overflow:hidden — html2canvas supports this
+    const wrapper = document.createElement('div');
+    wrapper.style.width = `${boxW}px`;
+    wrapper.style.height = `${boxH}px`;
+    wrapper.style.position = 'relative';
+    wrapper.style.overflow = 'hidden';
+    wrapper.style.borderRadius = img.style.borderRadius;
+    wrapper.style.border = img.style.border;
+    wrapper.style.flexShrink = img.style.flexShrink;
+    wrapper.style.display = 'inline-block';
+
+    // Reset img: remove object-fit, set computed size & position
+    img.style.objectFit = '';
+    img.style.width = `${renderW}px`;
+    img.style.height = `${renderH}px`;
+    img.style.position = 'absolute';
+    img.style.left = `${left}px`;
+    img.style.top = `${top}px`;
+    img.style.border = 'none';
+    img.style.borderRadius = '0';
+    img.style.maxWidth = 'none';
+    img.style.maxHeight = 'none';
+
+    // Replace the img with [wrapper > img]
+    img.replaceWith(wrapper);
+    wrapper.appendChild(img);
+  });
+}
+
+/** Force light-mode CSS variables on an element */
+function applyLightModeVars(el: HTMLElement): void {
+  for (const [k, v] of Object.entries(LIGHT_MODE_VARS)) {
+    el.style.setProperty(k, v);
+  }
+}
+
+/**
+ * Export the resume preview DOM element as a PNG image.
+ *
+ * Uses html2canvas for reliable text rendering (no spurious line-breaks),
+ * with a pre-processing step that converts <img> elements with object-fit
+ * into background-image <div>s — the one known html2canvas limitation.
+ *
+ * Strategy: clone the element into a fresh container appended directly to
+ * document.body so html2canvas works in a clean layout context.
+ */
+export async function exportToImage(
+  element: HTMLElement,
+  filename: string = 'resume.png',
+): Promise<void> {
+  // 1. Clone the element so we don't mutate the live DOM
+  const clone = element.cloneNode(true) as HTMLElement;
+
+  // Strip preview-only classes
+  clone.classList.remove('resume-preview-dark');
+
+  // Apply light-mode CSS variables
+  applyLightModeVars(clone);
+
+  // Remove box-shadow & transition for a clean capture
+  clone.style.boxShadow = 'none';
+  clone.style.transition = 'none';
+  clone.style.margin = '0';
+
+  // 2. Create a wrapper container and append the clone to document.body
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = [
+    'position: fixed',
+    'left: 0',
+    'top: 0',
+    'z-index: -9999',
+    'pointer-events: none',
+    'overflow: hidden',
+    'width: 0',
+    'height: 0',
+  ].join(';');
+
+  const inner = document.createElement('div');
+  inner.style.cssText = [
+    'position: absolute',
+    'left: 0',
+    'top: 0',
+    'width: max-content',
+    'height: max-content',
+    'visibility: visible',
+  ].join(';');
+
+  inner.appendChild(clone);
+  wrapper.appendChild(inner);
+  document.body.appendChild(wrapper);
+
+  // Small delay for styles/fonts to settle
+  await new Promise((r) => setTimeout(r, 150));
+
+  // 3. Fix object-fit images AFTER the clone is in the DOM
+  //    (so offsetWidth/offsetHeight are available)
+  fixObjectFitImages(clone);
+
+  // Another small delay after DOM mutations
+  await new Promise((r) => setTimeout(r, 50));
+
+  try {
+    const canvas = await html2canvas(clone, {
+      scale: 4,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      width: clone.scrollWidth,
+      height: clone.scrollHeight,
+      windowWidth: clone.scrollWidth,
+      windowHeight: clone.scrollHeight,
+    });
+
+    const dataUrl = canvas.toDataURL('image/png');
+
+    // Trigger download
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } finally {
+    // 4. Clean up the temporary wrapper
+    document.body.removeChild(wrapper);
+  }
+}
 
 /**
  * Export the resume preview DOM element as a PDF file.

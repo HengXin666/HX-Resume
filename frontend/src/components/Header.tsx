@@ -1,6 +1,7 @@
 import {
   DownloadOutlined,
   EyeOutlined,
+  FileImageOutlined,
   FileMarkdownOutlined,
   FilePdfOutlined,
   GithubOutlined,
@@ -29,14 +30,16 @@ import { downloadFile, exportToMarkdown, exportToMarkdownRedacted } from '../uti
 interface HeaderProps {
   onExportPDF: () => void;
   onExportHTML: () => void;
+  onExportImage: () => void;
   /** 公开简历模式下的导出回调 */
   onPublicExportPDF?: () => void;
   onPublicExportHTML?: () => void;
+  onPublicExportImage?: () => void;
   /** 切换公开简历模式（由 EditorPage 处理面板联动） */
   onTogglePublicMode?: () => void;
 }
 
-export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, onPublicExportHTML, onTogglePublicMode }: HeaderProps) {
+export default function Header({ onExportPDF, onExportHTML, onExportImage, onPublicExportPDF, onPublicExportHTML, onPublicExportImage, onTogglePublicMode }: HeaderProps) {
   const { mode, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
   const resume = useResumeStore((s) => s.resumes.find((r) => r.id === s.activeResumeId) ?? null);
@@ -71,6 +74,12 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
       label: 'HTML 页面',
       icon: <Html5Outlined />,
       onClick: onExportHTML,
+    },
+    {
+      key: 'png',
+      label: 'PNG 图片',
+      icon: <FileImageOutlined />,
+      onClick: onExportImage,
     },
     { type: 'divider' },
     {
@@ -141,6 +150,12 @@ export default function Header({ onExportPDF, onExportHTML, onPublicExportPDF, o
       label: '公开版 HTML 页面',
       icon: <Html5Outlined />,
       onClick: onPublicExportHTML,
+    },
+    {
+      key: 'pub-png',
+      label: '公开版 PNG 图片',
+      icon: <FileImageOutlined />,
+      onClick: onPublicExportImage,
     },
   ];
 

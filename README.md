@@ -135,11 +135,13 @@ cd HX-Resume
 
 # 启动前端
 cd frontend
-pnpm install && pnpm dev
+pnpm install 
+pnpm dev
 
 # 启动后端（新终端）
 cd backend
-uv sync && uv run fastapi dev app/main.py
+uv sync
+uv run fastapi dev app/main.py
 ```
 
 或者直接访问 **[🌐 在线 Demo](https://hengxin666.github.io/HX-Resume/)** 体验纯前端模式（无需后端）。

@@ -41,7 +41,7 @@ import { useResumeStore } from '../stores/resumeStore';
 import { usePublicResumeStore } from '../stores/publicResumeStore';
 import type { ResumeData, SectionKey } from '../types/resume';
 import { DEFAULT_SECTION_ORDER, DEFAULT_SECTION_VISIBILITY } from '../types/resume';
-import { exportToHTML, exportToPDF } from '../utils/exporters';
+import { exportToHTML, exportToImage, exportToPDF } from '../utils/exporters';
 import { getPageWidthMM } from '../templates/useSectionRenderer';
 
 /** Inline error boundary for individual editor sections */
@@ -248,6 +248,21 @@ export default function EditorPage() {
     message.success('HTML 已导出');
   }, [resume?.title]);
 
+  const handleExportImage = useCallback(async () => {
+    const el = previewRef.current?.querySelector('.resume-page') as HTMLElement;
+    if (!el) {
+      message.error('无法获取预览内容');
+      return;
+    }
+    message.loading({ content: '正在生成图片...', key: 'img', duration: 0 });
+    try {
+      await exportToImage(el, `${resume?.title ?? 'resume'}.png`);
+      message.success({ content: 'PNG 图片已导出', key: 'img' });
+    } catch {
+      message.error({ content: '图片导出失败', key: 'img' });
+    }
+  }, [resume?.title]);
+
   /** 公开版 PDF 导出（从打码预览面板抓取） */
   const handlePublicExportPDF = useCallback(async () => {
     const container = publicPreviewRef.current ?? previewRef.current;
@@ -275,6 +290,23 @@ export default function EditorPage() {
     }
     exportToHTML(el, `${resume?.title ?? 'resume'}_公开版`);
     message.success('公开版 HTML 已导出');
+  }, [resume?.title]);
+
+  /** 公开版图片导出 */
+  const handlePublicExportImage = useCallback(async () => {
+    const container = publicPreviewRef.current ?? previewRef.current;
+    const el = container?.querySelector('.resume-page') as HTMLElement;
+    if (!el) {
+      message.error('无法获取公开版预览内容');
+      return;
+    }
+    message.loading({ content: '正在生成公开版图片...', key: 'img', duration: 0 });
+    try {
+      await exportToImage(el, `${resume?.title ?? 'resume'}_公开版.png`);
+      message.success({ content: '公开版 PNG 图片已导出', key: 'img' });
+    } catch {
+      message.error({ content: '公开版图片导出失败', key: 'img' });
+    }
   }, [resume?.title]);
 
   const toggleExpand = (key: string) => {
@@ -479,8 +511,10 @@ export default function EditorPage() {
       <Header
         onExportPDF={handleExportPDF}
         onExportHTML={handleExportHTML}
+        onExportImage={handleExportImage}
         onPublicExportPDF={handlePublicExportPDF}
         onPublicExportHTML={handlePublicExportHTML}
+        onPublicExportImage={handlePublicExportImage}
         onTogglePublicMode={() => {
           const next = !isPublicMode;
           usePublicResumeStore.getState().setEnabled(next);
