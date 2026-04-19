@@ -9,6 +9,8 @@ interface Props {
   rows?: number;
   /** Show preview toggle or just be a textarea */
   preview?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 /**
@@ -24,6 +26,8 @@ export default function MarkdownEditor({
   placeholder = '支持 Markdown 语法...',
   rows = 4,
   preview = true,
+  onFocus,
+  onBlur,
 }: Props) {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -136,6 +140,8 @@ export default function MarkdownEditor({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onFocus={onFocus}
+          onBlur={onBlur}
           placeholder={placeholder}
           rows={rows}
           spellCheck={false}

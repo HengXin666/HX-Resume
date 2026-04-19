@@ -3,6 +3,7 @@ import { Button, Collapse, Form, Input } from 'antd';
 import type { ProjectItem } from '../../types/resume';
 import { useResumeStore } from '../../stores/resumeStore';
 import MarkdownEditor from '../MarkdownEditor';
+import DelimitedInput from './DelimitedInput';
 
 const emptyProject: ProjectItem = {
   name: '',
@@ -61,14 +62,9 @@ export default function ProjectsEditor() {
           />
         </Form.Item>
         <Form.Item label="技术栈（用逗号或空格分隔）">
-          <Input
-            value={p.keywords.join(' / ')}
-            onChange={(e) => {
-              const raw = e.target.value;
-              // 支持中英文逗号、分号、斜杠分隔
-              const keywords = raw.split(/[,，;；/]/).map((k) => k.trim()).filter(Boolean);
-              updateField(index, 'keywords', keywords);
-            }}
+          <DelimitedInput
+            value={p.keywords}
+            onChange={(keywords) => updateField(index, 'keywords', keywords)}
             placeholder="React / FastAPI / PostgreSQL"
           />
         </Form.Item>

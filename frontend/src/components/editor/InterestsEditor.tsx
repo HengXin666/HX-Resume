@@ -2,6 +2,7 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Form, Input } from 'antd';
 import type { InterestItem } from '../../types/resume';
 import { useResumeStore } from '../../stores/resumeStore';
+import DelimitedInput from './DelimitedInput';
 
 const emptyInterest: InterestItem = {
   name: '',
@@ -40,14 +41,13 @@ export default function InterestsEditor() {
                 />
               </Form.Item>
               <Form.Item label="关键词（逗号分隔）" style={{ margin: 0 }}>
-                <Input
-                  value={item.keywords.join(', ')}
-                  onChange={(e) =>
-                    updateInterest(index, {
-                      ...item,
-                      keywords: e.target.value.split(',').map((k) => k.trim()).filter(Boolean),
-                    })
+                <DelimitedInput
+                  value={item.keywords}
+                  onChange={(keywords) =>
+                    updateInterest(index, { ...item, keywords })
                   }
+                  displaySeparator=", "
+                  splitPattern={/[,，]/}
                   placeholder="编程, 摄影, 阅读"
                 />
               </Form.Item>

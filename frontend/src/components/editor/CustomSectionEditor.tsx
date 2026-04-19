@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { CustomSection, CustomSectionItem } from '../../types/resume';
 import { useResumeStore } from '../../stores/resumeStore';
 import MarkdownEditor from '../MarkdownEditor';
+import HighlightsEditor from './HighlightsEditor';
 
 const emptyItem: CustomSectionItem = {
   title: '',
@@ -89,15 +90,9 @@ export default function CustomSectionEditor({ section }: Props) {
           />
         </Form.Item>
         <Form.Item label="要点（每行一条，支持 Markdown）">
-          <MarkdownEditor
-            value={item.highlights.join('\n')}
-            onChange={(val) =>
-              updateField(
-                index,
-                'highlights',
-                val.split('\n').filter((l) => l.trim()),
-              )
-            }
+          <HighlightsEditor
+            value={item.highlights}
+            onChange={(highlights) => updateField(index, 'highlights', highlights)}
             rows={4}
             placeholder="每行一个要点..."
           />
