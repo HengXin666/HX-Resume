@@ -8,6 +8,8 @@ const SYNC_DEBOUNCE_MS = 8000;
 const INIT_RETRY_DELAY = 3000;
 const INIT_MAX_RETRIES = 5;
 
+export type ForceSyncResult = { ok: true; count: number } | { ok: false; error: string };
+
 /** True when running as a pure-frontend static build (GitHub Pages etc.) */
 const STATIC_MODE = import.meta.env.VITE_STATIC_MODE === 'true';
 
@@ -223,5 +225,69 @@ export function useBackendSync() {
     };
   }, [initialized, debouncedPush]);
 
-  return { syncing, lastSyncError, initialized, pushToBackend };
+  /**
+   * 强制保存到后端：立即将本地全量数据推送到后端，返回明确的成功/失败结果。
+   */
+  const forcePush = useCallback(async (): Promise<ForceSyncResult> => {
+    const { resumes, activeResumeId } = useResumeStore.getState();
+    if (resumes.length === 0) return { ok: false, error: '本地没有简历数据' };
+    setSyncing(true);
+    setLastSyncError(null);
+    try {
+      const publicConfigMap = buildPublicConfigMap();
+      const result = await syncResumesToBackend(resumes, activeResumeId, publicConfigMap);
+      console.log('[BackendSync] forcePush success:', result.synced, 'resumes');
+      setSyncing(false);
+      return { ok: true, count: result.synced };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '同步失败';
+      setLastSyncError(msg);
+      setSyncing(false);
+      return { ok: false, error: msg };
+    }
+  }, [buildPublicConfigMap]);
+
+  /**
+   * 强制从后端获取：丢弃本地数据，从后端拉取全量简历覆盖本地。
+   */
+  const forcePull = useCallback(async (): Promise<ForceSyncResult> => {
+    setSyncing(true);
+    setLastSyncError(null);
+    try {
+      const backendResumes = await fetchResumesFull();
+      if (backendResumes.length === 0) {
+        setSyncing(false);
+        return { ok: false, error: '后端没有简历数据' };
+      }
+
+      // 用后端数据完全覆盖本地
+      useResumeStore.getState().loadFromBackend(backendResumes);
+
+      // 覆盖 publicResumeStore 中的配置
+      const publicStore = usePublicResumeStore.getState();
+      for (const r of backendResumes) {
+        const pc = (r as unknown as Record<string, unknown>).public_config as PublicResumeConfig | null;
+        if (pc && pc.redactedItems && pc.redactedItems.length > 0) {
+          publicStore.loadFromBackend(r.id, pc);
+        }
+      }
+
+      // Switch to active resume's public config
+      const activeId = useResumeStore.getState().activeResumeId;
+      if (activeId) {
+        publicStore.switchResume(activeId);
+      }
+
+      console.log('[BackendSync] forcePull success:', backendResumes.length, 'resumes');
+      setSyncing(false);
+      return { ok: true, count: backendResumes.length };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '拉取失败';
+      setLastSyncError(msg);
+      setSyncing(false);
+      return { ok: false, error: msg };
+    }
+  }, []);
+
+  return { syncing, lastSyncError, initialized, pushToBackend, forcePush, forcePull };
 }

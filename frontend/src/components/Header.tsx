@@ -1,4 +1,6 @@
 import {
+  CloudDownloadOutlined,
+  CloudUploadOutlined,
   DownloadOutlined,
   EyeOutlined,
   FileImageOutlined,
@@ -8,6 +10,7 @@ import {
   HistoryOutlined,
   Html5Outlined,
   ImportOutlined,
+  LoadingOutlined,
   MoonOutlined,
   SaveOutlined,
   SunOutlined,
@@ -15,7 +18,7 @@ import {
   UploadOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { Button, Dropdown, Empty, Modal, Space, Tooltip, message } from 'antd';
+import { Button, Dropdown, Empty, Modal, Popconfirm, Space, Tooltip, message } from 'antd';
 import type { MenuProps } from 'antd';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +28,7 @@ import VersionDiffModal from './VersionDiffModal';
 import { useThemeStore } from '../stores/themeStore';
 import { useResumeStore } from '../stores/resumeStore';
 import { usePublicResumeStore } from '../stores/publicResumeStore';
+import { useBackendSyncContext } from '../contexts/BackendSyncContext';
 import { downloadFile, exportToMarkdown, exportToMarkdownRedacted } from '../utils/exporters';
 
 interface HeaderProps {
@@ -50,6 +54,33 @@ export default function Header({ onExportPDF, onExportHTML, onExportImage, onPub
   const [showVersions, setShowVersions] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [diffVersionId, setDiffVersionId] = useState<string | undefined>();
+  const [forceSyncing, setForceSyncing] = useState(false);
+
+  const backendSync = useBackendSyncContext();
+
+  const handleForcePush = async () => {
+    if (!backendSync) return;
+    setForceSyncing(true);
+    const result = await backendSync.forcePush();
+    setForceSyncing(false);
+    if (result.ok) {
+      message.success(`已成功保存 ${result.count} 份简历到后端`);
+    } else {
+      message.error(`保存到后端失败: ${result.error}`);
+    }
+  };
+
+  const handleForcePull = async () => {
+    if (!backendSync) return;
+    setForceSyncing(true);
+    const result = await backendSync.forcePull();
+    setForceSyncing(false);
+    if (result.ok) {
+      message.success(`已从后端获取 ${result.count} 份简历，本地数据已覆盖`);
+    } else {
+      message.error(`从后端获取失败: ${result.error}`);
+    }
+  };
 
   const exportMenuItems: MenuProps['items'] = [
     {
@@ -202,8 +233,44 @@ export default function Header({ onExportPDF, onExportHTML, onExportImage, onPub
         </span>
       </div>
 
-      {/* Auto-save status — centered between logo and actions */}
-      {resume && <AutoSaveIndicator />}
+      {/* Auto-save status + force sync — centered between logo and actions */}
+      {resume && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AutoSaveIndicator />
+          {import.meta.env.VITE_STATIC_MODE !== 'true' && backendSync && (
+            <>
+              <Tooltip title="强制将本地数据保存到后端（覆盖后端）">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={forceSyncing ? <LoadingOutlined spin /> : <CloudUploadOutlined />}
+                  onClick={handleForcePush}
+                  disabled={forceSyncing}
+                  style={{ color: 'var(--neon-cyan)', fontSize: '13px' }}
+                />
+              </Tooltip>
+              <Popconfirm
+                title="强制从后端获取"
+                description="此操作将用后端数据覆盖本地，当前未保存的修改将丢失，确定继续？"
+                onConfirm={handleForcePull}
+                okText="确定覆盖"
+                cancelText="取消"
+                okButtonProps={{ danger: true }}
+              >
+                <Tooltip title="强制从后端获取数据（覆盖本地）">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={forceSyncing ? <LoadingOutlined spin /> : <CloudDownloadOutlined />}
+                    disabled={forceSyncing}
+                    style={{ color: 'var(--neon-magenta)', fontSize: '13px' }}
+                  />
+                </Tooltip>
+              </Popconfirm>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Actions */}
       <Space size="small">

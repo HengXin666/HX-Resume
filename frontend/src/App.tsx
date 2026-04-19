@@ -7,7 +7,7 @@ import HomePage from './pages/HomePage';
 import EditorPage from './pages/EditorPage';
 import AboutPage from './pages/AboutPage';
 import { useThemeStore } from './stores/themeStore';
-import { useBackendSync } from './hooks/useBackendSync';
+import { BackendSyncProvider } from './contexts/BackendSyncContext';
 import './styles/cyberpunk.css';
 
 /** In static mode (GitHub Pages), use HashRouter to avoid 404 on page refresh */
@@ -15,8 +15,6 @@ const Router = import.meta.env.VITE_STATIC_MODE === 'true' ? HashRouter : Browse
 
 export default function App() {
   const { mode } = useThemeStore();
-  // Sync resume data with backend (auto push on changes, pull on startup)
-  useBackendSync();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', mode);
@@ -54,13 +52,15 @@ export default function App() {
     >
       <div className="cyber-bg" />
       <ErrorBoundary>
-        <Router>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/resume/:id" element={<EditorPage />} />
-            <Route path="/about" element={<AboutPage />} />
-          </Routes>
-        </Router>
+        <BackendSyncProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/resume/:id" element={<EditorPage />} />
+              <Route path="/about" element={<AboutPage />} />
+            </Routes>
+          </Router>
+        </BackendSyncProvider>
       </ErrorBoundary>
     </ConfigProvider>
   );
