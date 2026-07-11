@@ -13,6 +13,9 @@ export type ForceSyncResult = { ok: true; count: number } | { ok: false; error: 
 /** True when running as a pure-frontend static build (GitHub Pages etc.) */
 const STATIC_MODE = import.meta.env.VITE_STATIC_MODE === 'true';
 
+/** 联调后端模式（由 run.sh 注入）：关闭本地缓存优先，强制以后端数据为准。 */
+const LOCAL_CACHE_DISABLED = import.meta.env.VITE_DISABLE_LOCAL_CACHE === 'true';
+
 /**
  * Two-way sync between Zustand (localStorage) store and the backend API.
  *
@@ -154,6 +157,25 @@ export function useBackendSync() {
 
     async function tryInitialSync(): Promise<boolean> {
       const { resumes, activeResumeId } = useResumeStore.getState();
+
+      // 关闭本地缓存时：无论本地是否有数据，都强制从后端拉取并覆盖本地
+      if (LOCAL_CACHE_DISABLED) {
+        console.log('[BackendSync] local cache disabled, force pulling from backend...');
+        const pulled = await tryPullFromBackend();
+        if (pulled) {
+          // 后端拉取成功后，仍把本地（可能为空）的改动合并推回，保持双向一致
+          try {
+            const publicConfigMap = buildPublicConfigMap();
+            const localResumes = useResumeStore.getState().resumes;
+            if (localResumes.length > 0) {
+              await syncResumesToBackend(localResumes, useResumeStore.getState().activeResumeId, publicConfigMap);
+            }
+          } catch {
+            console.warn('[BackendSync] post-pull push skipped (backend may be read-only)');
+          }
+        }
+        return pulled;
+      }
 
       // If local store is empty, try to pull from backend first
       if (resumes.length === 0) {
