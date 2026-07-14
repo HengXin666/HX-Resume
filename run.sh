@@ -1,91 +1,161 @@
 #!/usr/bin/env bash
-# 启动脚本：随机挑选一个可用端口启动后端，并让前端对接同一端口
-# 用法：
-#   ./run.sh            同时启动后端 + 前端（默认）
-#   ./run.sh backend    只启动后端
-#   ./run.sh frontend   只启动前端（使用已生成的端口文件）
-
+# Dev runner:
+#   ./run.sh            start backend and frontend
+#   ./run.sh backend    start backend only
+#   ./run.sh frontend   start frontend only, connected to a running backend
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
 FRONTEND_DIR="$ROOT_DIR/frontend"
-PORT_FILE="$ROOT_DIR/.dev_port"
 
-# 随机扫描一个可用端口：在 8100~8999 之间找一个未被监听的端口
+native_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -w "$1"
+  else
+    echo "$1"
+  fi
+}
+
+export UV_NO_CACHE="${UV_NO_CACHE:-1}"
+export UV_PROJECT_ENVIRONMENT="${UV_PROJECT_ENVIRONMENT:-$(native_path "$ROOT_DIR/.uv-venv")}"
+export UV_PYTHON_PREFERENCE="${UV_PYTHON_PREFERENCE:-only-system}"
+export PYTHONUTF8="${PYTHONUTF8:-1}"
+if [ -z "${UV_PYTHON:-}" ] && command -v python >/dev/null 2>&1; then
+  export UV_PYTHON="$(native_path "$(command -v python)")"
+fi
+BACKEND_PORT_FILE="$ROOT_DIR/.dev_backend_port"
+FRONTEND_PORT_FILE="$ROOT_DIR/.dev_frontend_port"
+BACKEND_PID_FILE="$ROOT_DIR/.backend.pid"
+FRONTEND_PID_FILE="$ROOT_DIR/.frontend.pid"
+
+is_port_open() {
+  local host="${1:-127.0.0.1}"
+  local port="$2"
+  (exec 3<>"/dev/tcp/${host}/${port}") 2>/dev/null
+}
+
 pick_free_port() {
-  local lo=8100 hi=8999
+  local lo="$1"
+  local hi="$2"
+
   for _ in $(seq 1 200); do
     local port=$(( lo + RANDOM % (hi - lo + 1) ))
-    if (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null; then
-      exec 3>&- 3<&-
-    else
+    if ! is_port_open 127.0.0.1 "$port"; then
       echo "$port"
       return 0
     fi
   done
-  echo "无法在 $lo~$hi 范围内找到可用端口" >&2
+
+  echo "Could not find a free port in ${lo}-${hi}." >&2
   exit 1
+}
+
+wait_for_port() {
+  local port="$1"
+  local name="$2"
+  local retries="${3:-60}"
+
+  for _ in $(seq 1 "$retries"); do
+    if is_port_open 127.0.0.1 "$port"; then
+      return 0
+    fi
+    sleep 0.5
+  done
+
+  echo "${name} did not start on port ${port}." >&2
+  return 1
+}
+
+write_frontend_env() {
+  local backend_port="$1"
+
+  {
+    echo "VITE_API_URL=http://localhost:${backend_port}/api"
+    echo "VITE_DISABLE_LOCAL_CACHE=true"
+  } > "$FRONTEND_DIR/.env.development"
 }
 
 start_backend() {
   local port="$1"
-  echo "启动后端于端口 $port ..."
-  ( cd "$BACKEND_DIR" && uv run fastapi dev app/main.py --port "$port" ) &
-  echo $! > "$ROOT_DIR/.backend.pid"
+
+  echo "Starting backend: http://localhost:${port}/docs"
+  (cd "$BACKEND_DIR" && uv run uvicorn app.main:app --host 0.0.0.0 --port "$port" --reload) &
+  echo $! > "$BACKEND_PID_FILE"
+
+  wait_for_port "$port" "Backend"
+  echo "$port" > "$BACKEND_PORT_FILE"
 }
 
 start_frontend() {
-  local port="$1"
-  # 把端口写入前端开发环境文件，供 VITE_API_URL 读取
-  # 联调后端模式：关闭前端本地缓存优先逻辑，强制以后端数据为准
-  {
-    echo "VITE_API_URL=http://localhost:${port}/api"
-    echo "VITE_DISABLE_LOCAL_CACHE=true"
-  } > "$FRONTEND_DIR/.env.development"
-  echo "前端将通过 http://localhost:${port}/api 对接后端"
-  ( cd "$FRONTEND_DIR" && npm run dev ) &
-  echo $! > "$ROOT_DIR/.frontend.pid"
+  local backend_port="$1"
+  local frontend_port="${2:-$(pick_free_port 5173 5199)}"
+
+  write_frontend_env "$backend_port"
+  echo "Frontend API: http://localhost:${backend_port}/api"
+  echo "Starting frontend: http://localhost:${frontend_port}"
+
+  (cd "$FRONTEND_DIR" && npm run dev -- --host 0.0.0.0 --port "$frontend_port" --strictPort) &
+  echo $! > "$FRONTEND_PID_FILE"
+
+  wait_for_port "$frontend_port" "Frontend"
+  echo "$frontend_port" > "$FRONTEND_PORT_FILE"
 }
 
 stop_all() {
   echo
-  echo "收到退出信号，正在关闭服务 ..."
-  [ -f "$ROOT_DIR/.backend.pid" ] && kill "$(cat "$ROOT_DIR/.backend.pid")" 2>/dev/null || true
-  [ -f "$ROOT_DIR/.frontend.pid" ] && kill "$(cat "$ROOT_DIR/.frontend.pid")" 2>/dev/null || true
-  rm -f "$ROOT_DIR/.backend.pid" "$ROOT_DIR/.frontend.pid" "$PORT_FILE"
+  echo "Stopping services ..."
+  [ -f "$BACKEND_PID_FILE" ] && kill "$(cat "$BACKEND_PID_FILE")" 2>/dev/null || true
+  [ -f "$FRONTEND_PID_FILE" ] && kill "$(cat "$FRONTEND_PID_FILE")" 2>/dev/null || true
+  rm -f "$BACKEND_PID_FILE" "$FRONTEND_PID_FILE" "$BACKEND_PORT_FILE" "$FRONTEND_PORT_FILE"
   exit 0
 }
 trap stop_all INT TERM
 
 CMD="${1:-all}"
 
-if [ "$CMD" = "frontend" ]; then
-  if [ ! -f "$PORT_FILE" ]; then
-    echo "未找到端口文件 $PORT_FILE，请先运行 ./run.sh backend 或 ./run.sh" >&2
+case "$CMD" in
+  backend)
+    BACKEND_PORT="$(pick_free_port 8100 8999)"
+    start_backend "$BACKEND_PORT"
+    echo
+    echo "Backend is running: http://localhost:${BACKEND_PORT}/docs"
+    wait
+    ;;
+  frontend)
+    if [ -f "$BACKEND_PORT_FILE" ]; then
+      BACKEND_PORT="$(cat "$BACKEND_PORT_FILE")"
+    else
+      BACKEND_PORT="${BACKEND_PORT:-8000}"
+      echo "No backend port file found; trying http://localhost:${BACKEND_PORT}/api"
+    fi
+
+    if ! is_port_open 127.0.0.1 "$BACKEND_PORT"; then
+      echo "Backend port ${BACKEND_PORT} is not reachable. Run ./run.sh backend or ./run.sh first." >&2
+      exit 1
+    fi
+
+    FRONTEND_PORT="$(pick_free_port 5173 5199)"
+    start_frontend "$BACKEND_PORT" "$FRONTEND_PORT"
+    echo
+    echo "Frontend is running: http://localhost:${FRONTEND_PORT}"
+    wait
+    ;;
+  all)
+    BACKEND_PORT="$(pick_free_port 8100 8999)"
+    FRONTEND_PORT="$(pick_free_port 5173 5199)"
+
+    start_backend "$BACKEND_PORT"
+    start_frontend "$BACKEND_PORT" "$FRONTEND_PORT"
+
+    echo
+    echo "Backend: http://localhost:${BACKEND_PORT}/docs"
+    echo "Frontend: http://localhost:${FRONTEND_PORT}"
+    echo "Frontend API: http://localhost:${BACKEND_PORT}/api"
+    wait
+    ;;
+  *)
+    echo "Unknown command: ${CMD} (available: all | backend | frontend)" >&2
     exit 1
-  fi
-  PORT="$(cat "$PORT_FILE")"
-  start_frontend "$PORT"
-  wait
-  exit 0
-fi
-
-PORT="$(pick_free_port)"
-echo "$PORT" > "$PORT_FILE"
-echo "本次分配端口：$PORT"
-
-if [ "$CMD" = "backend" ]; then
-  start_backend "$PORT"
-  wait
-elif [ "$CMD" = "all" ]; then
-  start_backend "$PORT"
-  start_frontend "$PORT"
-  echo
-  echo "后端: http://localhost:${PORT}/docs"
-  echo "前端: http://localhost:5173 (自动对接后端端口 $PORT)"
-  wait
-else
-  echo "未知参数：$CMD (可用: all | backend | frontend)" >&2
-  exit 1
-fi
+    ;;
+esac

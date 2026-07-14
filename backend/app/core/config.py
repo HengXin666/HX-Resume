@@ -10,16 +10,14 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./hx_resume.db"
 
-    # CORS – cover all Vite dev-server ports (auto-increments when 5173 is busy)
+    # Common local dev origins. The regex covers auto-selected Vite ports.
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://localhost:5176",
-        "http://localhost:5177",
-        "http://localhost:5178",
+        "http://127.0.0.1:5173",
         "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ]
+    CORS_ORIGIN_REGEX: str = r"^http://(localhost|127\.0\.0\.1):[0-9]+$"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
@@ -28,5 +26,5 @@ settings = Settings()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# data/ 目录 — 本地 git 仓库，用于同步简历数据到私有远程仓库
+# data/ is a local git repository used for syncing resume data.
 DATA_DIR = BASE_DIR / "data"

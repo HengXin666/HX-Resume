@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +23,17 @@ class BasicsSchema(BaseModel):
     location: dict[str, str] = Field(default_factory=dict)
     profiles: list[SocialProfile] = Field(default_factory=list)
     avatar: str = ""
+    header_layout: Literal[
+        "classic-center",
+        "left-right",
+        "banner-gradient",
+        "sidebar-photo",
+        "compact-inline",
+        "modern-card",
+    ] = "classic-center"
+    show_header_divider: bool = True
+    avatar_position: Literal["left", "right"] = "left"
+    avatar_ratio: Literal["1:1", "2:3", "3:4", "4:3"] = "2:3"
 
 
 class EducationItem(BaseModel):
