@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">HX-Resume 工作流</title>
+  <desc id="desc">从编辑简历，到实时预览，再到导出或同步私有数据的流程图。</desc>
+  <defs>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#00e5ff"/><stop offset="1" stop-color="#a855f7"/></linearGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#25243d"/></pattern>
+  </defs>
+  <rect width="1200" height="360" rx="24" fill="#080816"/>
+  <rect width="1200" height="360" rx="24" fill="url(#grid)" opacity=".45"/>
+  <text x="56" y="52" fill="#8d8aa9" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" letter-spacing="2">ONE RESUME, MANY DESTINATIONS</text>
+  <path d="M260 178H330M550 178H620M840 178H910" stroke="url(#line)" stroke-width="3"/>
+  <path d="M320 168l12 10-12 10M610 168l12 10-12 10M900 168l12 10-12 10" fill="none" stroke="#00e5ff" stroke-width="3"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif">
+    <g transform="translate(56 105)">
+      <rect width="204" height="146" rx="16" fill="#131326" stroke="#383653"/>
+      <circle cx="28" cy="30" r="12" fill="#00e5ff" opacity=".18"/><text x="28" y="36" text-anchor="middle" fill="#00e5ff" font-size="18" font-weight="700">1</text>
+      <text x="52" y="36" fill="#f4f3ff" font-size="21" font-weight="700">编辑</text>
+      <text x="24" y="76" fill="#a9a8c5" font-size="17">模块化内容</text><text x="24" y="103" fill="#a9a8c5" font-size="17">Markdown / 拖拽</text><text x="24" y="130" fill="#6f6d8d" font-size="15">输入一次，随时调整</text>
+    </g>
+    <g transform="translate(346 105)">
+      <rect width="204" height="146" rx="16" fill="#131326" stroke="#383653"/>
+      <circle cx="28" cy="30" r="12" fill="#8b5cf6" opacity=".2"/><text x="28" y="36" text-anchor="middle" fill="#b794f4" font-size="18" font-weight="700">2</text>
+      <text x="52" y="36" fill="#f4f3ff" font-size="21" font-weight="700">预览</text>
+      <text x="24" y="76" fill="#a9a8c5" font-size="17">5 套模板</text><text x="24" y="103" fill="#a9a8c5" font-size="17">主题 / 分页 / 打码</text><text x="24" y="130" fill="#6f6d8d" font-size="15">边写边确认版式</text>
+    </g>
+    <g transform="translate(636 105)">
+      <rect width="204" height="146" rx="16" fill="#131326" stroke="#383653"/>
+      <circle cx="28" cy="30" r="12" fill="#ec4899" opacity=".2"/><text x="28" y="36" text-anchor="middle" fill="#f472b6" font-size="18" font-weight="700">3</text>
+      <text x="52" y="36" fill="#f4f3ff" font-size="21" font-weight="700">导出</text>
+      <text x="24" y="76" fill="#a9a8c5" font-size="17">PDF / HTML</text><text x="24" y="103" fill="#a9a8c5" font-size="17">Markdown / JSON</text><text x="24" y="130" fill="#6f6d8d" font-size="15">投递、分享、迁移</text>
+    </g>
+    <g transform="translate(926 105)">
+      <rect width="204" height="146" rx="16" fill="#131326" stroke="#383653"/>
+      <circle cx="28" cy="30" r="12" fill="#00e5ff" opacity=".18"/><text x="28" y="36" text-anchor="middle" fill="#00e5ff" font-size="18" font-weight="700">4</text>
+      <text x="52" y="36" fill="#f4f3ff" font-size="21" font-weight="700">同步</text>
+      <text x="24" y="76" fill="#a9a8c5" font-size="17">本地 Git CLI</text><text x="24" y="103" fill="#a9a8c5" font-size="17">私有仓库 Push / Pull</text><text x="24" y="130" fill="#6f6d8d" font-size="15">数据边界由你掌握</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">HX-Resume 在线简历工作台</title>
+  <desc id="desc">一个以实时编辑、预览和多格式导出为核心的现代化简历管理工具。</desc>
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00e5ff"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#25243d" stroke-width="1"/>
+    </pattern>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="380" rx="28" fill="#080816"/>
+  <rect x="1" y="1" width="1198" height="378" rx="27" fill="url(#grid)" opacity=".58"/>
+  <path d="M58 60H570" stroke="#2c2b47"/>
+  <circle cx="74" cy="60" r="5" fill="#00e5ff" filter="url(#glow)"/>
+  <text x="94" y="68" fill="#8b89a8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" letter-spacing="2">RESUME WORKSPACE / OPEN SOURCE</text>
+  <text x="58" y="145" fill="#f4f3ff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="64" font-weight="800">HX::RESUME</text>
+  <text x="62" y="192" fill="#a9a8c5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="25">把经历写进去，把简历带出去。</text>
+  <text x="62" y="230" fill="#6f6d8d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="20">实时编辑 · 多模板预览 · 隐私公开 · PDF / HTML / Markdown / JSON</text>
+  <rect x="62" y="274" width="208" height="48" rx="12" fill="url(#accent)"/>
+  <text x="166" y="305" text-anchor="middle" fill="#fff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="20" font-weight="700">在线体验 →</text>
+  <text x="62" y="350" fill="#777594" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">React 19  /  FastAPI  /  SQLite  /  Git sync</text>
+
+  <g transform="translate(700 48)">
+    <rect x="34" y="0" width="430" height="280" rx="18" fill="#131326" stroke="#373554"/>
+    <rect x="50" y="48" width="112" height="214" rx="10" fill="#0d0d1e" stroke="#292744"/>
+    <rect x="66" y="70" width="80" height="10" rx="5" fill="#00e5ff" opacity=".9"/>
+    <rect x="66" y="96" width="65" height="8" rx="4" fill="#686583"/>
+    <rect x="66" y="124" width="80" height="8" rx="4" fill="#35334f"/>
+    <rect x="66" y="145" width="58" height="8" rx="4" fill="#35334f"/>
+    <rect x="66" y="184" width="80" height="36" rx="8" fill="#171633" stroke="#4a3c9d"/>
+    <rect x="182" y="48" width="258" height="214" rx="10" fill="#f6f5fb"/>
+    <rect x="205" y="68" width="110" height="13" rx="6" fill="#a400c8"/>
+    <rect x="205" y="98" width="190" height="7" rx="3" fill="#c9c7d7"/>
+    <rect x="205" y="122" width="210" height="2" fill="#a400c8"/>
+    <rect x="205" y="143" width="190" height="8" rx="4" fill="#77758b"/>
+    <rect x="205" y="163" width="170" height="8" rx="4" fill="#b7b4c6"/>
+    <rect x="205" y="194" width="200" height="8" rx="4" fill="#77758b"/>
+    <rect x="205" y="214" width="150" height="8" rx="4" fill="#b7b4c6"/>
+    <path d="M170 264H448" stroke="url(#accent)" stroke-width="4"/>
+    <text x="34" y="314" fill="#777594" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">EDIT</text>
+    <text x="182" y="314" fill="#777594" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">PREVIEW</text>
+    <text x="366" y="314" fill="#00e5ff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">EXPORT</text>
+  </g>
+</svg>
