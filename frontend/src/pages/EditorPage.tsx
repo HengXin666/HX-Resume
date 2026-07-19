@@ -18,6 +18,8 @@ import {
   SolutionOutlined,
   TrophyOutlined,
   UserOutlined,
+  ZoomInOutlined,
+  ZoomOutOutlined,
 } from '@ant-design/icons';
 import { Button, Empty, Switch, message, Popconfirm } from 'antd';
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -144,7 +146,9 @@ export default function EditorPage() {
   const previewRef = useRef<HTMLDivElement>(null);
   const publicPreviewRef = useRef<HTMLDivElement>(null);
   const previewPanelRef = useRef<HTMLDivElement>(null);
-  const [previewScale, setPreviewScale] = useState(0.55);
+  const [fitScale, setFitScale] = useState(0.55);
+  const [previewZoom, setPreviewZoom] = useState(0.55);
+  const [isPreviewFit, setIsPreviewFit] = useState(true);
   const {
     resumes, setActiveResume, addCustomSection, reorderSections,
     toggleSectionVisibility, setSectionVisibility, removeCustomSection,
@@ -197,13 +201,25 @@ export default function EditorPage() {
       const padding = 48; // 24px each side
       const available = panelWidth - padding;
       const scale = Math.min(available / PAGE_WIDTH_PX, 1);
-      setPreviewScale(Math.max(scale, 0.3));
+      const nextFitScale = Math.max(scale, 0.3);
+      setFitScale(nextFitScale);
+      if (isPreviewFit) setPreviewZoom(nextFitScale);
     };
     calcScale();
     const ro = new ResizeObserver(calcScale);
     ro.observe(panel);
     return () => ro.disconnect();
-  }, [pageWidthMM]);
+  }, [pageWidthMM, isPreviewFit]);
+
+  const adjustPreviewZoom = (delta: number) => {
+    setIsPreviewFit(false);
+    setPreviewZoom((current) => Math.min(2, Math.max(0.3, Math.round((current + delta) * 20) / 20)));
+  };
+
+  const setPreviewZoomLevel = (level: number) => {
+    setIsPreviewFit(false);
+    setPreviewZoom(level);
+  };
 
   useEffect(() => {
     if (!id || !hydrated) return;
@@ -765,20 +781,57 @@ export default function EditorPage() {
 
         {/* Panel 3: Right Preview Area */}
         <div className="preview-panel" ref={previewPanelRef}>
-          <div
-            className="preview-panel__scaler"
-            style={{
-              transform: `scale(${previewScale})`,
-              width: `${pageWidthMM}mm`,
-            }}
-          >
-            <SectionErrorBoundary name="简历预览">
-              {isPublicMode ? (
-                <RedactedPreview ref={publicPreviewRef} />
-              ) : (
-                <ResumePreview ref={previewRef} onSectionClick={scrollToSection} />
+          <div className="preview-panel__toolbar" role="toolbar" aria-label="预览缩放">
+            <button type="button" className="preview-panel__zoom-button" onClick={() => adjustPreviewZoom(-0.1)} aria-label="缩小预览">
+              <ZoomOutOutlined />
+            </button>
+            <select
+              className="preview-panel__zoom-select"
+              value={isPreviewFit ? 'fit' : String(previewZoom)}
+              onChange={(event) => {
+                if (event.target.value === 'fit') {
+                  setIsPreviewFit(true);
+                  setPreviewZoom(fitScale);
+                } else {
+                  setPreviewZoomLevel(Number(event.target.value));
+                }
+              }}
+              aria-label="预览比例"
+            >
+              <option value="fit">适合窗口</option>
+              {!isPreviewFit && ![0.5, 0.75, 1, 1.25, 1.5, 2].includes(previewZoom) && (
+                <option value={previewZoom}>{Math.round(previewZoom * 100)}%</option>
               )}
-            </SectionErrorBoundary>
+              {[0.5, 0.75, 1, 1.25, 1.5, 2].map((level) => (
+                <option key={level} value={level}>{Math.round(level * 100)}%</option>
+              ))}
+            </select>
+            <button type="button" className="preview-panel__zoom-button" onClick={() => adjustPreviewZoom(0.1)} aria-label="放大预览">
+              <ZoomInOutlined />
+            </button>
+            <span className="preview-panel__zoom-hint">局部缩放</span>
+          </div>
+          <div
+            className="preview-panel__canvas"
+            style={{ width: `${pageWidthMM * (96 / 25.4) * fitScale}px` }}
+          >
+            <div
+              className="preview-panel__scaler"
+              style={{
+                // The canvas width stays at the fitted width. Only its inner
+                // page grows, allowing local horizontal/vertical scrolling.
+                zoom: previewZoom,
+                width: `${pageWidthMM}mm`,
+              }}
+            >
+              <SectionErrorBoundary name="简历预览">
+                {isPublicMode ? (
+                  <RedactedPreview ref={publicPreviewRef} />
+                ) : (
+                  <ResumePreview ref={previewRef} onSectionClick={scrollToSection} />
+                )}
+              </SectionErrorBoundary>
+            </div>
           </div>
         </div>
       </div>

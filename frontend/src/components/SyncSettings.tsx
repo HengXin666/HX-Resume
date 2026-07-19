@@ -75,6 +75,26 @@ export default function SyncSettings() {
     setPushing(true);
     try {
       const result = await gitPush();
+      if (result.confirmation_required) {
+        Modal.confirm({
+          title: '远程仓库存在更新',
+          content: '远程仓库有本地尚未包含的提交。继续推送可能覆盖远程数据，确认继续吗？',
+          okText: '确认覆盖并推送',
+          cancelText: '取消',
+          onOk: async () => {
+            setPushing(true);
+            try {
+              const confirmed = await gitPush(true);
+              if (confirmed.ok) message.success(confirmed.message || '推送成功');
+              else message.error(confirmed.error || '推送失败');
+              await fetchState();
+            } finally {
+              setPushing(false);
+            }
+          },
+        });
+        return;
+      }
       if (result.ok) {
         message.success(result.message || '推送成功');
       } else {

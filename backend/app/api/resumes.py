@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.resume import Resume
 from app.schemas.resume import (
+    BasicsSchema,
     ResumeCreate,
     ResumeListItem,
     ResumeResponse,
@@ -120,7 +121,9 @@ async def export_resume_json(resume_id: str, db: AsyncSession = Depends(get_db))
         "title": resume.title,
         "slug": resume.slug,
         "template_id": resume.template_id,
-        "basics": resume.basics,
+        # Re-validate legacy rows so header layout/divider/avatar settings are
+        # always present in exported JSON, even when the row predates them.
+        "basics": BasicsSchema.model_validate(resume.basics or {}).model_dump(),
         "education": resume.education,
         "work": resume.work,
         "skills_text": resume.skills_text,

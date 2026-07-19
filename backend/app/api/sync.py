@@ -14,6 +14,12 @@ class SyncConfigRequest(BaseModel):
     branch: str = "main"
 
 
+class SyncPushRequest(BaseModel):
+    """Push confirmation is required when the remote has newer commits."""
+
+    confirm: bool = False
+
+
 # ── 配置管理 ──
 
 
@@ -42,9 +48,9 @@ async def git_pull():
 
 
 @router.post("/push")
-async def git_push():
+async def git_push(body: SyncPushRequest | None = None):
     """将本地数据推送到远程仓库。"""
-    result = await git_sync_service.git_push()
+    result = await git_sync_service.git_push(confirm=bool(body and body.confirm))
     return result
 
 

@@ -96,6 +96,7 @@ export interface SyncResult {
   message?: string;
   error?: string;
   detail?: string;
+  confirmation_required?: boolean;
 }
 
 export interface GitStatus {
@@ -121,8 +122,8 @@ export async function gitPull(): Promise<SyncResult> {
   return data;
 }
 
-export async function gitPush(): Promise<SyncResult> {
-  const { data } = await api.post('/sync/push');
+export async function gitPush(confirm = false): Promise<SyncResult> {
+  const { data } = await api.post('/sync/push', { confirm });
   return data;
 }
 

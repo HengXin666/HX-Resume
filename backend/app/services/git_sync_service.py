@@ -152,7 +152,7 @@ class GitSyncService:
 
         return {"ok": True, "message": msg}
 
-    async def git_push(self) -> dict[str, Any]:
+    async def git_push(self, confirm: bool = False) -> dict[str, Any]:
         """将本地 db 复制到 data/ 并推送到远程仓库。"""
         if not self.is_configured:
             return {"ok": False, "error": "未配置远程仓库地址"}
@@ -161,25 +161,81 @@ class GitSyncService:
         cfg = self.read_config()
         branch = cfg.get("branch", "main")
 
+        # Always refresh the remote view before a push.  If the remote has
+        # commits that are not present locally, never overwrite them silently:
+        # the caller must explicitly confirm this potentially destructive
+        # operation.
+        await self._run_git("fetch", "origin", branch)
+        _, remote_head, _ = await self._run_git("rev-parse", f"origin/{branch}")
+        if remote_head and not confirm:
+            local_head_code, local_head, _ = await self._run_git("rev-parse", "HEAD")
+            if local_head_code == 0:
+                remote_is_ancestor, _, _ = await self._run_git(
+                    "merge-base", "--is-ancestor", remote_head, local_head
+                )
+                if remote_is_ancestor != 0:
+                    return {
+                        "ok": False,
+                        "confirmation_required": True,
+                        "error": "远程仓库有本地尚未包含的更新，继续推送可能覆盖远程数据",
+                        "detail": "请确认后再次执行推送",
+                    }
+
         # 先把 db 复制到 data/ 目录
         copied = await asyncio.to_thread(self._copy_db_to_data)
         if not copied:
             return {"ok": False, "error": "本地数据库不存在，无法推送"}
 
-        # Stage all changes
-        await self._run_git("add", "-A")
+        # Stage all changes.  Do not use the localized output of ``git commit``
+        # to decide whether there is anything to commit (Git may write that
+        # message to stdout or stderr depending on the version/platform).
+        code, _, err = await self._run_git("add", "-A")
+        if code != 0:
+            return {"ok": False, "error": f"暂存失败: {err}"}
 
-        # Commit
-        code, out, err = await self._run_git(
-            "commit", "-m", "sync: update resume data"
-        )
-        if code != 0 and "nothing to commit" not in (out + err):
-            return {"ok": False, "error": f"Commit 失败: {err}", "detail": out}
+        _, staged_out, _ = await self._run_git("diff", "--cached", "--name-only")
+        committed = False
+        if staged_out:
+            code, out, err = await self._run_git(
+                "commit", "-m", "sync: update resume data"
+            )
+            if code != 0:
+                return {"ok": False, "error": f"Commit 失败: {err or out}", "detail": out}
+            committed = True
 
-        # Push
+        # If this branch already tracks the remote and has no commits waiting
+        # to be pushed, finish without invoking ``git push -u``.  Apart from
+        # being cheaper, this avoids reporting Git's branch-setup text as a
+        # misleading push result on a clean second attempt.
+        if not committed:
+            upstream_code, upstream, _ = await self._run_git(
+                "rev-parse", "--abbrev-ref", "@{upstream}"
+            )
+            if upstream_code == 0:
+                ahead_code, ahead, _ = await self._run_git(
+                    "rev-list", "--count", f"{upstream}..HEAD"
+                )
+                if ahead_code == 0 and ahead.strip() == "0":
+                    return {"ok": True, "message": "没有新的本地修改，远程仓库已是最新"}
+
+        # A previous failed push may have left the local branch behind the
+        # remote.  Rebase and retry once so the user does not need to press
+        # Push repeatedly.  This is safe for the single synced database file;
+        # conflicts are returned explicitly for manual resolution.
         code, out, err = await self._run_git("push", "-u", "origin", branch)
         if code != 0:
-            return {"ok": False, "error": err, "detail": out}
+            pull_code, pull_out, pull_err = await self._run_git(
+                "pull", "--rebase", "origin", branch
+            )
+            if pull_code != 0:
+                return {
+                    "ok": False,
+                    "error": f"Push 失败，且无法合并远程更新: {pull_err or pull_out or err}",
+                    "detail": out,
+                }
+            code, out, err = await self._run_git("push", "-u", "origin", branch)
+            if code != 0:
+                return {"ok": False, "error": err or out or "推送失败", "detail": out}
 
         return {"ok": True, "message": out or "推送成功"}
 

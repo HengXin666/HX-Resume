@@ -16,7 +16,7 @@ import type {
   StyleConfig,
   WorkItem,
 } from '../types/resume';
-import { DEFAULT_SECTION_ORDER, DEFAULT_SECTION_VISIBILITY, createEmptyResume } from '../types/resume';
+import { DEFAULT_BASICS, DEFAULT_SECTION_ORDER, DEFAULT_SECTION_VISIBILITY, createEmptyResume } from '../types/resume';
 
 interface ResumeStore {
   // Multi-resume state
@@ -116,6 +116,20 @@ function patchById(
         ? { ...r, ...patcher(r), updated_at: new Date().toISOString() }
         : r,
     ),
+  };
+}
+
+/** Normalize basics so header presentation settings survive every hydrate/import path. */
+function normalizeBasics(value: Partial<Basics> | null | undefined): Basics {
+  return {
+    ...DEFAULT_BASICS,
+    ...(value ?? {}),
+    location: { ...DEFAULT_BASICS.location, ...(value?.location ?? {}) },
+    profiles: value?.profiles ?? [...DEFAULT_BASICS.profiles],
+    header_layout: value?.header_layout ?? DEFAULT_BASICS.header_layout,
+    show_header_divider: value?.show_header_divider ?? DEFAULT_BASICS.show_header_divider,
+    avatar_position: value?.avatar_position ?? DEFAULT_BASICS.avatar_position,
+    avatar_ratio: value?.avatar_ratio ?? DEFAULT_BASICS.avatar_ratio,
   };
 }
 
@@ -269,7 +283,7 @@ export const useResumeStore = create<ResumeStore>()(
       // ── Edit active resume fields ──
       updateBasics: (basics) =>
         set((s) => patchActive(s, (r) => ({
-          basics: { ...r.basics, ...basics },
+          basics: normalizeBasics({ ...r.basics, ...basics }),
         }))),
 
       setEducation: (education) =>
@@ -445,6 +459,7 @@ export const useResumeStore = create<ResumeStore>()(
         const merged: ResumeData = {
           ...base,
           ...data,
+          basics: normalizeBasics(data.basics),
           id: crypto.randomUUID(),
           sort_order: get().resumes.length,
           created_at: new Date().toISOString(),
@@ -469,6 +484,7 @@ export const useResumeStore = create<ResumeStore>()(
         const hydrated: ResumeData[] = backendResumes.map((r, i) => ({
           ...createEmptyResume(),
           ...r,
+          basics: normalizeBasics(r.basics),
           versions: r.versions ?? [],
           sort_order: r.sort_order ?? i,
         }));
@@ -481,7 +497,7 @@ export const useResumeStore = create<ResumeStore>()(
     }),
     {
       name: 'hx-resume-data',
-      version: 10,
+      version: 11,
       partialize: (state) => ({
         resumes: state.resumes,
         activeResumeId: state.activeResumeId,
@@ -577,8 +593,8 @@ export const useResumeStore = create<ResumeStore>()(
           state.resumes = state.resumes.map((r) => ({
             ...r,
             basics: {
-              ...r.basics,
-              header_layout: (r.basics as Record<string, unknown>).header_layout ?? 'classic-center',
+              ...normalizeBasics(r.basics),
+              header_layout: r.basics?.header_layout ?? 'classic-center',
             },
           }));
         }
@@ -587,8 +603,8 @@ export const useResumeStore = create<ResumeStore>()(
           state.resumes = state.resumes.map((r) => ({
             ...r,
             basics: {
-              ...r.basics,
-              show_header_divider: (r.basics as Record<string, unknown>).show_header_divider ?? true,
+              ...normalizeBasics(r.basics),
+              show_header_divider: r.basics?.show_header_divider ?? true,
             },
           }));
         }
@@ -597,10 +613,18 @@ export const useResumeStore = create<ResumeStore>()(
           state.resumes = state.resumes.map((r) => ({
             ...r,
             basics: {
-              ...r.basics,
-              avatar_position: (r.basics as Record<string, unknown>).avatar_position ?? 'left',
-              avatar_ratio: (r.basics as Record<string, unknown>).avatar_ratio ?? '2:3',
+              ...normalizeBasics(r.basics),
+              avatar_position: r.basics?.avatar_position ?? 'left',
+              avatar_ratio: r.basics?.avatar_ratio ?? '2:3',
             },
+          }));
+        }
+        if (version < 11 && state.resumes) {
+          // Normalize all basics, including data written by v10 without the
+          // new header presentation keys.
+          state.resumes = state.resumes.map((r) => ({
+            ...r,
+            basics: normalizeBasics(r.basics),
           }));
         }
         return state;

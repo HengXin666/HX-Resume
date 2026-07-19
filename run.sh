@@ -76,6 +76,23 @@ write_frontend_env() {
   } > "$FRONTEND_DIR/.env.development"
 }
 
+ensure_frontend_dependencies() {
+  # npm run resolves binaries from node_modules/.bin.  On a fresh checkout
+  # that directory does not exist yet, so install from the committed lockfile
+  # before attempting to start Vite.
+  if [ -x "$FRONTEND_DIR/node_modules/.bin/vite" ]; then
+    return 0
+  fi
+
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm is required to start the frontend, but it was not found in PATH." >&2
+    return 1
+  fi
+
+  echo "Frontend dependencies are missing; installing them with npm ci ..."
+  (cd "$FRONTEND_DIR" && npm ci --no-audit --no-fund)
+}
+
 start_backend() {
   local port="$1"
 
@@ -91,6 +108,7 @@ start_frontend() {
   local backend_port="$1"
   local frontend_port="${2:-$(pick_free_port 5173 5199)}"
 
+  ensure_frontend_dependencies
   write_frontend_env "$backend_port"
   echo "Frontend API: http://localhost:${backend_port}/api"
   echo "Starting frontend: http://localhost:${frontend_port}"
