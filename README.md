@@ -119,6 +119,48 @@ sh ./run.sh
 
 前端默认运行在 `http://localhost:5173`，后端 API 默认运行在 `http://localhost:8000`。若要分别启动或调试，请参阅 [开发指南](docs/DEVELOPMENT.md)。
 
+本地开发默认账号为 `admin`，默认密码为 `hx-resume-dev-password`。该密码仅用于开发模式；生产模式会拒绝使用默认密码启动。
+
+### Docker Compose 一键部署
+
+完整模式包含登录、SQLite 持久化、字体管理和 Git 同步。部署时只向宿主机暴露前端端口，后端 API 由前端 Nginx 在容器网络中反向代理。
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env`，至少替换以下两项：
+
+```dotenv
+HX_RESUME_PASSWORD=一段至少12位的强密码
+HX_RESUME_SESSION_SECRET=使用-openssl-rand-hex-32-生成的随机值
+```
+
+生成会话密钥并一键启动：
+
+```bash
+openssl rand -hex 32
+docker compose up -d --build
+```
+
+打开 `http://localhost:8080`，使用 `.env` 中的 `HX_RESUME_USERNAME` 和 `HX_RESUME_PASSWORD` 登录。端口可通过 `HX_RESUME_PORT` 修改。
+
+```bash
+docker compose ps          # 查看状态
+docker compose logs -f     # 查看日志
+docker compose down        # 停止，保留数据卷
+```
+
+安全与数据边界：
+
+- 所有简历、字体和 Git 同步 API 均要求登录；写请求还会校验会话绑定的 CSRF token。
+- 登录 Cookie 使用 HttpOnly 与 SameSite=Strict，密码不会保存到浏览器。
+- SQLite、上传字体和 Git 数据目录使用 Docker 命名卷持久化。
+- Compose 未设置密码或随机会话密钥时会拒绝启动；生产密码至少需要 12 位。
+- 密码和会话密钥通过 Compose secrets 只读挂载，不进入镜像层或容器环境变量。
+- 若在 HTTPS 反向代理之后部署，请将 `HX_RESUME_COOKIE_SECURE=true`。
+- `.env` 已被 Git 忽略，不要把真实密码提交到仓库。
+
 ## 静态版与完整模式
 
 | 能力 | GitHub Pages 静态版 | 本地完整模式 |
@@ -128,6 +170,7 @@ sh ./run.sh
 | 多简历与版本快照 | ✅ | ✅ |
 | 自定义字体上传 | — | ✅ |
 | Git 私有仓库同步 | — | ✅ |
+| 管理员登录与 API 鉴权 | — | ✅ |
 | 数据存储 | 浏览器 `localStorage` | 本地 SQLite + `backend/data/` |
 
 > Git 同步使用本机已有的 SSH 或 HTTPS 凭据，不需要在 HX-Resume 中配置 Token。简历数据目录已从主仓库排除。

@@ -1,18 +1,22 @@
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
-from app.api.resumes import router as resumes_router
+from app.api.auth import router as auth_router
 from app.api.fonts import router as fonts_router
+from app.api.resumes import router as resumes_router
 from app.api.sync import router as sync_router
 from app.core.config import settings
 from app.core.database import init_db
+from app.core.security import require_authenticated
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    settings.validate_security_settings()
     await init_db()
     yield
 
@@ -31,9 +35,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(resumes_router, prefix="/api")
-app.include_router(fonts_router, prefix="/api")
-app.include_router(sync_router, prefix="/api")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SESSION_SECRET,
+    session_cookie=settings.SESSION_COOKIE_NAME,
+    max_age=settings.SESSION_MAX_AGE,
+    same_site="strict",
+    https_only=settings.SESSION_COOKIE_SECURE,
+)
+
+protected = [Depends(require_authenticated)]
+app.include_router(auth_router, prefix="/api")
+app.include_router(resumes_router, prefix="/api", dependencies=protected)
+app.include_router(fonts_router, prefix="/api", dependencies=protected)
+app.include_router(sync_router, prefix="/api", dependencies=protected)
 
 
 @app.get("/api/health")

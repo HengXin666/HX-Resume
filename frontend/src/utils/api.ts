@@ -4,7 +4,61 @@ import type { ResumeData, PublicResumeConfig } from '../types/resume';
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
+
+let csrfToken: string | null = null;
+const WRITE_METHODS = new Set(['post', 'put', 'patch', 'delete']);
+
+export function setCsrfToken(value: string | null): void {
+  csrfToken = value;
+}
+
+api.interceptors.request.use((config) => {
+  if (csrfToken && WRITE_METHODS.has(config.method?.toLowerCase() ?? '')) {
+    config.headers.set('X-CSRF-Token', csrfToken);
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      const path = error.config?.url ?? '';
+      if (!path.endsWith('/auth/login')) {
+        setCsrfToken(null);
+        window.dispatchEvent(new Event('hx-auth-expired'));
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+
+// ── Authentication APIs ──
+
+export interface AuthSession {
+  authenticated: boolean;
+  username?: string | null;
+  csrf_token?: string | null;
+}
+
+export async function fetchAuthSession(): Promise<AuthSession> {
+  const { data } = await api.get<AuthSession>('/auth/session');
+  setCsrfToken(data.csrf_token ?? null);
+  return data;
+}
+
+export async function loginWithPassword(username: string, password: string): Promise<AuthSession> {
+  const { data } = await api.post<AuthSession>('/auth/login', { username, password });
+  setCsrfToken(data.csrf_token ?? null);
+  return data;
+}
+
+export async function logoutSession(): Promise<void> {
+  await api.post('/auth/logout');
+  setCsrfToken(null);
+}
 
 // ── Resume APIs ──
 

@@ -1,0 +1,66 @@
+name: hx-resume
+
+services:
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DEBUG: "false"
+      DATABASE_URL: sqlite+aiosqlite:////app/database/hx_resume.db
+      AUTH_USERNAME: ${HX_RESUME_USERNAME:-admin}
+      AUTH_PASSWORD_FILE: /run/secrets/auth_password
+      SESSION_SECRET_FILE: /run/secrets/session_secret
+      SESSION_MAX_AGE: ${HX_RESUME_SESSION_MAX_AGE:-43200}
+      SESSION_COOKIE_SECURE: ${HX_RESUME_COOKIE_SECURE:-false}
+    secrets:
+      - auth_password
+      - session_secret
+    volumes:
+      - resume_database:/app/database
+      - resume_data:/app/data
+      - resume_uploads:/app/uploads
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"]
+      interval: 20s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+        VITE_STATIC_MODE: "false"
+        VITE_DISABLE_LOCAL_CACHE: "true"
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${HX_RESUME_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/healthz"]
+      interval: 20s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  resume_database:
+  resume_data:
+  resume_uploads:
+
+secrets:
+  auth_password:
+    environment: HX_RESUME_PASSWORD
+  session_secret:
+    environment: HX_RESUME_SESSION_SECRET

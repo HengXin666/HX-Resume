@@ -6,12 +6,42 @@ import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import EditorPage from './pages/EditorPage';
 import AboutPage from './pages/AboutPage';
+import LoginPage from './pages/LoginPage';
 import { useThemeStore } from './stores/themeStore';
 import { BackendSyncProvider } from './contexts/BackendSyncContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import './styles/cyberpunk.css';
 
 /** In static mode (GitHub Pages), use HashRouter to avoid 404 on page refresh */
 const Router = import.meta.env.VITE_STATIC_MODE === 'true' ? HashRouter : BrowserRouter;
+
+function AuthenticatedApplication() {
+  const { checking, authenticated } = useAuth();
+
+  if (checking) {
+    return (
+      <div className="auth-loading" role="status" aria-live="polite">
+        <span className="auth-loading__spinner" />
+        正在验证登录状态
+      </div>
+    );
+  }
+
+  if (!authenticated) return <LoginPage />;
+
+  return (
+    <BackendSyncProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/resume/:id" element={<EditorPage />} />
+          <Route path="/about" element={<AboutPage />} />
+        </Routes>
+      </Router>
+    </BackendSyncProvider>
+  );
+}
 
 export default function App() {
   const { mode } = useThemeStore();
@@ -52,15 +82,9 @@ export default function App() {
     >
       <div className="cyber-bg" />
       <ErrorBoundary>
-        <BackendSyncProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/resume/:id" element={<EditorPage />} />
-              <Route path="/about" element={<AboutPage />} />
-            </Routes>
-          </Router>
-        </BackendSyncProvider>
+        <AuthProvider>
+          <AuthenticatedApplication />
+        </AuthProvider>
       </ErrorBoundary>
     </ConfigProvider>
   );

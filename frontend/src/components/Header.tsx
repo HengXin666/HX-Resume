@@ -11,6 +11,7 @@ import {
   Html5Outlined,
   ImportOutlined,
   LoadingOutlined,
+  LogoutOutlined,
   MoonOutlined,
   SaveOutlined,
   SunOutlined,
@@ -29,6 +30,7 @@ import { useThemeStore } from '../stores/themeStore';
 import { useResumeStore } from '../stores/resumeStore';
 import { usePublicResumeStore } from '../stores/publicResumeStore';
 import { useBackendSyncContext } from '../contexts/BackendSyncContext';
+import { useAuth } from '../hooks/useAuth';
 import { downloadFile, exportToMarkdown, exportToMarkdownRedacted } from '../utils/exporters';
 
 interface HeaderProps {
@@ -57,6 +59,7 @@ export default function Header({ onExportPDF, onExportHTML, onExportImage, onPub
   const [forceSyncing, setForceSyncing] = useState(false);
 
   const backendSync = useBackendSyncContext();
+  const { username, logout } = useAuth();
 
   const handleForcePush = useCallback(async () => {
     if (!backendSync) {
@@ -401,6 +404,18 @@ export default function Header({ onExportPDF, onExportHTML, onExportImage, onPub
         )}
 
         {import.meta.env.VITE_STATIC_MODE !== 'true' && <SyncSettings />}
+
+        {import.meta.env.VITE_STATIC_MODE !== 'true' && (
+          <Tooltip title={`退出登录${username ? `（${username}）` : ''}`}>
+            <Button
+              type="text"
+              icon={<LogoutOutlined />}
+              onClick={() => void logout()}
+              aria-label="退出登录"
+              style={{ color: 'var(--text-secondary)', fontSize: '14px' }}
+            />
+          </Tooltip>
+        )}
 
         <Tooltip title={mode === 'dark' ? '切换亮色' : '切换暗色'}>
           <Button
