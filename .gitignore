@@ -11,7 +11,7 @@ backend/.venv/
 backend/data/
 backend/uploads/
 
-# Docker deployment secrets
+# Local environment overrides
 .env
 
 # sync_config.json 随本项目提交，不排除

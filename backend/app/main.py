@@ -13,10 +13,11 @@ from app.core.config import settings
 from app.core.database import init_db
 from app.core.security import require_authenticated
 
+settings.validate_security_settings()
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
-    settings.validate_security_settings()
     await init_db()
     yield
 

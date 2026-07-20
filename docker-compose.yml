@@ -2,21 +2,21 @@ name: hx-resume
 
 services:
   backend:
-    build:
-      context: ./backend
+    image: ghcr.io/hengxin666/hx-resume-backend:latest
+    pull_policy: always
     restart: unless-stopped
     environment:
       APP_ENV: production
       DEBUG: "false"
       DATABASE_URL: sqlite+aiosqlite:////app/database/hx_resume.db
-      AUTH_USERNAME: ${HX_RESUME_USERNAME:-admin}
-      AUTH_PASSWORD_FILE: /run/secrets/auth_password
-      SESSION_SECRET_FILE: /run/secrets/session_secret
-      SESSION_MAX_AGE: ${HX_RESUME_SESSION_MAX_AGE:-43200}
-      SESSION_COOKIE_SECURE: ${HX_RESUME_COOKIE_SECURE:-false}
-    secrets:
-      - auth_password
-      - session_secret
+
+      # 管理员账号和密码：部署前必须修改密码，至少 12 位。
+      AUTH_USERNAME: "admin"
+      AUTH_PASSWORD: "CHANGE_ME_TO_A_STRONG_PASSWORD"
+
+      SESSION_MAX_AGE: "43200"
+      # 通过雷池等 HTTPS 反向代理访问时建议改为 "true"。
+      SESSION_COOKIE_SECURE: "false"
     volumes:
       - resume_database:/app/database
       - resume_data:/app/data
@@ -33,18 +33,15 @@ services:
       - no-new-privileges:true
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_URL: /api
-        VITE_STATIC_MODE: "false"
-        VITE_DISABLE_LOCAL_CACHE: "true"
+    image: ghcr.io/hengxin666/hx-resume-frontend:latest
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - "${HX_RESUME_PORT:-8080}:80"
+      # 只开放 Web；需要修改端口时只改左侧 8080。
+      - "8080:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/healthz"]
       interval: 20s
@@ -58,9 +55,3 @@ volumes:
   resume_database:
   resume_data:
   resume_uploads:
-
-secrets:
-  auth_password:
-    environment: HX_RESUME_PASSWORD
-  session_secret:
-    environment: HX_RESUME_SESSION_SECRET

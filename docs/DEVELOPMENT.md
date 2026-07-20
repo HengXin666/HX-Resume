@@ -82,7 +82,7 @@ uv run fastapi dev app/main.py
 - 登录成功后后端签发 HttpOnly 签名会话 Cookie。
 - 前端从 `/api/auth/session` 恢复会话，并为写请求附加 CSRF token。
 - `/api/resumes`、`/api/fonts`、`/api/sync` 下的路由全部需要登录。
-- 生产环境必须通过 `AUTH_PASSWORD` 与 `SESSION_SECRET` 提供强凭据，否则后端拒绝启动。
+- 生产环境必须提供至少 12 位的 `AUTH_PASSWORD`，会话密钥默认从密码派生。
 
 静态 GitHub Pages 构建不会连接后端，因此保持免登录模式。
 
@@ -142,26 +142,27 @@ pnpm preview
 
 ## 🐳 Docker Compose 部署
 
-根目录提供 `docker-compose.yml`，包含：
+根目录提供可独立使用的 `docker-compose.yml`，引用 GHCR 预构建镜像：
 
-- `frontend`：构建 React 静态资源并由 Nginx 提供，代理同源 `/api`。
-- `backend`：运行 FastAPI，仅暴露在 Compose 内部网络。
+- `frontend`：Nginx 提供 React 静态资源，代理同源 `/api`。
+- `backend`：FastAPI，仅暴露在 Compose 内部网络。
 - `resume_database`、`resume_data`、`resume_uploads`：持久化数据库、Git 数据和字体。
-- `auth_password`、`session_secret`：从部署环境读取并以只读 Compose secrets 挂载。
 
 ```bash
-cp .env.example .env
-# 编辑 .env 中的密码，并用 `openssl rand -hex 32` 生成会话密钥
-docker compose up -d --build
+curl -O https://raw.githubusercontent.com/HengXin666/HX-Resume/main/docker-compose.yml
+# 编辑 YAML 中的 AUTH_PASSWORD 和可选的 Web 端口
+docker compose up -d
 ```
 
-默认仅暴露 `8080` 端口。可通过 `.env` 中的 `HX_RESUME_PORT` 修改。升级时重新执行 `docker compose up -d --build`，命名卷中的数据不会被覆盖。
+默认仅暴露 `8080` 端口，修改 `ports` 左侧数字即可换端口。升级时执行 `docker compose pull && docker compose up -d`，命名卷中的数据不会被覆盖。
 
-公开到互联网前应配置 HTTPS，并设置：
+通过雷池等反向代理公开到互联网时应配置 HTTPS，并在 YAML 中设置：
 
-```dotenv
-HX_RESUME_COOKIE_SECURE=true
+```yaml
+SESSION_COOKIE_SECURE: "true"
 ```
+
+`.github/workflows/publish-containers.yml` 会在 `main` 分支、`v*` 标签或手动触发时发布 amd64/arm64 镜像到 GHCR。
 
 ### 手动启用 GitHub Pages
 

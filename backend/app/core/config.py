@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
@@ -56,16 +57,19 @@ class Settings(BaseSettings):
         if self.AUTH_PASSWORD in {
             "hx-resume-dev-password",
             "replace-with-a-long-password",
+            "CHANGE_ME_TO_A_STRONG_PASSWORD",
         } or len(self.AUTH_PASSWORD) < 12:
             raise RuntimeError("AUTH_PASSWORD must be changed and contain at least 12 characters")
-        if (
-            self.SESSION_SECRET
-            in {
-                "hx-resume-development-session-secret",
-                "replace-with-at-least-32-random-characters",
-            }
-            or len(self.SESSION_SECRET) < 32
-        ):
+        if self.SESSION_SECRET in {
+            "hx-resume-development-session-secret",
+            "replace-with-at-least-32-random-characters",
+        }:
+            # A standalone Compose file should only require one user-managed
+            # secret. Changing the password also rotates all existing sessions.
+            self.SESSION_SECRET = hashlib.sha256(
+                f"hx-resume-session:{self.AUTH_PASSWORD}".encode()
+            ).hexdigest()
+        elif len(self.SESSION_SECRET) < 32:
             raise RuntimeError("SESSION_SECRET must be random and contain at least 32 characters")
 
 

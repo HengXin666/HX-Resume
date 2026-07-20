@@ -123,27 +123,35 @@ sh ./run.sh
 
 ### Docker Compose 一键部署
 
-完整模式包含登录、SQLite 持久化、字体管理和 Git 同步。部署时只向宿主机暴露前端端口，后端 API 由前端 Nginx 在容器网络中反向代理。
+完整模式包含登录、SQLite 持久化、字体管理和 Git 同步。部署时只向宿主机暴露前端端口，后端 API 由前端 Nginx 在容器网络中反向代理。无需克隆源码，只需要一个 Compose 文件：
 
 ```bash
-cp .env.example .env
+mkdir hx-resume && cd hx-resume
+curl -O https://raw.githubusercontent.com/HengXin666/HX-Resume/main/docker-compose.yml
 ```
 
-编辑 `.env`，至少替换以下两项：
+编辑 `docker-compose.yml`：
 
-```dotenv
-HX_RESUME_PASSWORD=一段至少12位的强密码
-HX_RESUME_SESSION_SECRET=使用-openssl-rand-hex-32-生成的随机值
+```yaml
+AUTH_USERNAME: "admin"
+AUTH_PASSWORD: "改成一段至少12位的强密码"
+# 如需修改 Web 端口，只修改左侧数字
+ports:
+  - "8080:80"
 ```
 
-生成会话密钥并一键启动：
+然后一键启动：
 
 ```bash
-openssl rand -hex 32
-docker compose up -d --build
+docker compose up -d
 ```
 
-打开 `http://localhost:8080`，使用 `.env` 中的 `HX_RESUME_USERNAME` 和 `HX_RESUME_PASSWORD` 登录。端口可通过 `HX_RESUME_PORT` 修改。
+打开 `http://服务器地址:8080`，使用 YAML 中设置的账号和密码登录。升级镜像时执行：
+
+```bash
+docker compose pull
+docker compose up -d
+```
 
 ```bash
 docker compose ps          # 查看状态
@@ -156,10 +164,15 @@ docker compose down        # 停止，保留数据卷
 - 所有简历、字体和 Git 同步 API 均要求登录；写请求还会校验会话绑定的 CSRF token。
 - 登录 Cookie 使用 HttpOnly 与 SameSite=Strict，密码不会保存到浏览器。
 - SQLite、上传字体和 Git 数据目录使用 Docker 命名卷持久化。
-- Compose 未设置密码或随机会话密钥时会拒绝启动；生产密码至少需要 12 位。
-- 密码和会话密钥通过 Compose secrets 只读挂载，不进入镜像层或容器环境变量。
-- 若在 HTTPS 反向代理之后部署，请将 `HX_RESUME_COOKIE_SECURE=true`。
-- `.env` 已被 Git 忽略，不要把真实密码提交到仓库。
+- 未修改 YAML 中的占位密码时后端会拒绝启动；生产密码至少需要 12 位。
+- 会话签名密钥由密码派生，修改密码并重建容器后，所有旧会话会自动失效。
+- YAML 包含明文部署密码，请设置文件权限为 `chmod 600 docker-compose.yml`，不要公开提交。
+- 使用雷池等 HTTPS 反向代理时，把 `SESSION_COOKIE_SECURE` 改为 `"true"`，上游地址指向 `http://服务器地址:8080`。
+
+镜像由 GitHub Actions 自动发布到：
+
+- `ghcr.io/hengxin666/hx-resume-frontend:latest`
+- `ghcr.io/hengxin666/hx-resume-backend:latest`
 
 ## 静态版与完整模式
 
