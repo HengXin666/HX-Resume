@@ -1070,6 +1070,12 @@ body {
   border-color: var(--neon-cyan);
 }
 
+.preview-panel__zoom-button--active {
+  color: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  background: color-mix(in srgb, var(--neon-cyan) 10%, var(--bg-tertiary));
+}
+
 .preview-panel__edit-button {
   display: inline-flex;
   align-items: center;
@@ -1111,13 +1117,15 @@ body {
 }
 
 .preview-panel__editing-banner {
+  position: absolute;
+  top: 52px;
+  right: 24px;
   z-index: 9;
-  width: min(100%, 820px);
+  width: min(420px, calc(100% - 48px));
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin: 0 0 12px;
   padding: 8px 10px;
   border: 1px solid rgba(0, 240, 255, 0.28);
   border-radius: 8px;
@@ -1148,7 +1156,6 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-left: auto;
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -1163,7 +1170,8 @@ body {
   font: 10px var(--font-mono);
 }
 
-.preview-panel__editing-banner button {
+.preview-panel__editing-banner .preview-panel__editing-banner-close {
+  margin-left: auto;
   height: 26px;
   padding: 0 10px;
   border: 1px solid var(--neon-cyan);
@@ -1174,8 +1182,20 @@ body {
   cursor: pointer;
 }
 
-.preview-panel__editing-banner button:hover {
+.preview-panel__editing-banner .preview-panel__editing-banner-close:hover {
   background: rgba(0, 240, 255, 0.18);
+}
+
+@media (max-width: 640px) {
+  .preview-panel__editing-banner {
+    top: 48px;
+    right: 12px;
+    width: calc(100% - 24px);
+  }
+
+  .preview-panel__editing-shortcuts {
+    white-space: normal;
+  }
 }
 
 @keyframes editingPulse {

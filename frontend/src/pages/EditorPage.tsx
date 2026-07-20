@@ -10,6 +10,7 @@ import {
   FormatPainterOutlined,
   GlobalOutlined,
   HolderOutlined,
+  InfoCircleOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   PlusOutlined,
@@ -165,6 +166,7 @@ export default function EditorPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activePanel, setActivePanel] = useState<'editor' | 'style' | 'public'>('editor');
   const [inlineEditing, setInlineEditing] = useState(true);
+  const [editingGuideVisible, setEditingGuideVisible] = useState(false);
 
   // Wait for zustand persist hydration before doing anything (both stores)
   useEffect(() => {
@@ -812,12 +814,27 @@ export default function EditorPage() {
               <button
                 type="button"
                 className={`preview-panel__edit-button ${inlineEditing ? 'preview-panel__edit-button--active' : ''}`}
-                onClick={() => setInlineEditing((current) => !current)}
+                onClick={() => {
+                  setInlineEditing((current) => !current);
+                  setEditingGuideVisible(false);
+                }}
                 aria-pressed={inlineEditing}
                 title="开启后可直接点击预览中的文字进行编辑"
               >
                 <EditOutlined />
                 {inlineEditing ? '完成编辑' : '直接编辑'}
+              </button>
+            )}
+            {!isPublicMode && inlineEditing && (
+              <button
+                type="button"
+                className={`preview-panel__zoom-button ${editingGuideVisible ? 'preview-panel__zoom-button--active' : ''}`}
+                onClick={() => setEditingGuideVisible((current) => !current)}
+                aria-label={editingGuideVisible ? '隐藏编辑提示' : '显示编辑提示'}
+                aria-expanded={editingGuideVisible}
+                title={editingGuideVisible ? '隐藏编辑提示' : '显示编辑提示'}
+              >
+                <InfoCircleOutlined />
               </button>
             )}
             <button type="button" className="preview-panel__zoom-button" onClick={() => adjustPreviewZoom(-0.1)} aria-label="缩小预览">
@@ -851,7 +868,7 @@ export default function EditorPage() {
               {!isPublicMode && inlineEditing ? '点击文字修改' : '局部缩放'}
             </span>
           </div>
-          {!isPublicMode && inlineEditing && (
+          {!isPublicMode && inlineEditing && editingGuideVisible && (
             <div className="preview-panel__editing-banner" role="status">
               <span className="preview-panel__editing-pulse" aria-hidden="true" />
               <span>
@@ -863,7 +880,13 @@ export default function EditorPage() {
                 <kbd>Ctrl/⌘ Enter</kbd> 保存多行
                 <kbd>Esc</kbd> 撤销
               </span>
-              <button type="button" onClick={() => setInlineEditing(false)}>完成</button>
+              <button
+                type="button"
+                className="preview-panel__editing-banner-close"
+                onClick={() => setEditingGuideVisible(false)}
+              >
+                隐藏提示
+              </button>
             </div>
           )}
           <div className="preview-panel__viewport" ref={previewViewportRef}>
