@@ -1,15 +1,18 @@
 import type { ResumeData, SectionKey } from '../types/resume';
+import { DEFAULT_DEPARTMENT_POSITION_SEPARATOR } from '../types/resume';
 import '../styles/resume-print.css';
 import { getVisibleSections, isBuiltinSection, getPageSizeVars, buildHeadingStyle } from './useSectionRenderer';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import HeaderSection from '../components/HeaderSection';
+import InlineResumeField from '../components/InlineResumeField';
 
 interface Props {
   resume: ResumeData;
   onSectionClick?: (sectionKey: string) => void;
+  inlineEditing?: boolean;
 }
 
-export default function ModernTemplate({ resume, onSectionClick }: Props) {
+export default function ModernTemplate({ resume, onSectionClick, inlineEditing = false }: Props) {
   const { basics, education, work, skills_text, projects, awards, languages, interests, style_config: style } = resume;
   const visibleSections = getVisibleSections(resume);
 
@@ -45,7 +48,7 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
       basics.summary ? (
         <div key="summary" className="resume-section--clickable" style={{ marginBottom: `${style.section_gap}px`, ...sectionClickStyle }} onClick={handleClick('basics')}>
           {renderHeading('个人简介')}
-          <MarkdownRenderer content={basics.summary} />
+          <InlineResumeField value={basics.summary} target={{ section: 'basics', field: 'summary' }} enabled={inlineEditing} markdown />
         </div>
       ) : null,
 
@@ -66,19 +69,29 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="resume-item-header">
-                    <span style={{ fontWeight: 600, fontSize: '15px' }}>{w.company}</span>
+                    <InlineResumeField value={w.company} target={{ section: 'work', index: i, field: 'company' }} enabled={inlineEditing} style={{ fontWeight: 600, fontSize: '15px' }} />
                     <span className="resume-item-date">{w.start_date} ~ {w.end_date || '至今'}</span>
                   </div>
                   {(w.department || w.position) && (
                     <div style={{ color: 'var(--resume-sub)', fontSize: '13px', marginTop: '2px' }}>
-                      {w.department}{w.department && w.position && ' '}{w.position}
+                      <InlineResumeField value={w.department} target={{ section: 'work', index: i, field: 'department' }} enabled={inlineEditing} />
+                      {w.department && w.position && (
+                        <InlineResumeField
+                          value={w.department_position_separator ?? DEFAULT_DEPARTMENT_POSITION_SEPARATOR}
+                          target={{ section: 'work', index: i, field: 'department_position_separator' }}
+                          enabled={inlineEditing}
+                          className="resume-work-separator"
+                          placeholder=""
+                        />
+                      )}
+                      <InlineResumeField value={w.position} target={{ section: 'work', index: i, field: 'position' }} enabled={inlineEditing} />
                     </div>
                   )}
                 </div>
               </div>
               {w.description && (
                 <div style={{ marginTop: '4px' }}>
-                  <MarkdownRenderer content={w.description} />
+                  <InlineResumeField value={w.description} target={{ section: 'work', index: i, field: 'description' }} enabled={inlineEditing} markdown />
                 </div>
               )}
             </div>
@@ -93,7 +106,7 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
           {projects.map((p, i) => (
             <div key={i} className="resume-item" data-section="projects" data-item-index={i} style={{ marginTop: '10px' }}>
               <div className="resume-item-header">
-                <span style={{ fontWeight: 600, fontSize: '15px' }}>{p.name}</span>
+                <InlineResumeField value={p.name} target={{ section: 'projects', index: i, field: 'name' }} enabled={inlineEditing} style={{ fontWeight: 600, fontSize: '15px' }} />
                 <span className="resume-item-date">
                   {p.start_date}{p.end_date ? ` ~ ${p.end_date}` : ''}
                 </span>
@@ -109,7 +122,7 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
                   )}
                 </div>
               )}
-              {p.description && <div style={{ color: 'var(--resume-muted)', marginTop: '4px' }}><MarkdownRenderer content={p.description} /></div>}
+              {p.description && <div style={{ color: 'var(--resume-muted)', marginTop: '4px' }}><InlineResumeField value={p.description} target={{ section: 'projects', index: i, field: 'description' }} enabled={inlineEditing} markdown /></div>}
             </div>
           ))}
         </div>
@@ -123,14 +136,14 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
             <div key={i} className="resume-item" data-section="education" data-item-index={i} style={{ marginTop: '10px' }}>
               <div className="resume-item-header">
                 <div>
-                  <span style={{ fontWeight: 600 }}>{e.institution}</span>
+                  <InlineResumeField value={e.institution} target={{ section: 'education', index: i, field: 'institution' }} enabled={inlineEditing} style={{ fontWeight: 600 }} />
                   {e.area && <span style={{ color: 'var(--resume-muted)' }}> ~ {e.area} · {e.study_type}</span>}
                 </div>
                 <span className="resume-item-date">{e.start_date} ~ {e.end_date || '至今'}</span>
               </div>
               {e.description && (
                 <div style={{ marginTop: '4px' }}>
-                  <MarkdownRenderer content={e.description} />
+                  <InlineResumeField value={e.description} target={{ section: 'education', index: i, field: 'description' }} enabled={inlineEditing} markdown />
                 </div>
               )}
             </div>
@@ -142,7 +155,7 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
       skills_text ? (
         <div key="skills" className="resume-section--clickable" style={{ marginBottom: `${style.section_gap}px`, ...sectionClickStyle }} onClick={handleClick('skills')}>
           {renderHeading('专业技能')}
-          <MarkdownRenderer content={skills_text} />
+          <InlineResumeField value={skills_text} target={{ section: 'skills', field: 'skills_text' }} enabled={inlineEditing} markdown />
         </div>
       ) : null,
 
@@ -154,12 +167,12 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
             <div key={i} className="resume-item" data-section="awards" data-item-index={i} style={{ marginTop: '8px' }}>
               <div className="resume-item-header">
                 <div>
-                  <span style={{ fontWeight: 600 }}>{a.title}</span>
+                  <InlineResumeField value={a.title} target={{ section: 'awards', index: i, field: 'title' }} enabled={inlineEditing} style={{ fontWeight: 600 }} />
                   {a.awarder && <span style={{ color: 'var(--resume-muted)' }}> · {a.awarder}</span>}
                 </div>
                 {a.date && <span className="resume-item-date">{a.date}</span>}
               </div>
-              {a.summary && <div style={{ color: 'var(--resume-muted)', fontSize: '13px', marginTop: '2px' }}><MarkdownRenderer content={a.summary} /></div>}
+              {a.summary && <div style={{ color: 'var(--resume-muted)', fontSize: '13px', marginTop: '2px' }}><InlineResumeField value={a.summary} target={{ section: 'awards', index: i, field: 'summary' }} enabled={inlineEditing} markdown /></div>}
             </div>
           ))}
         </div>
@@ -172,7 +185,7 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {languages.map((lang, i) => (
               <span key={i} style={{ fontSize: '13px' }}>
-                <strong>{lang.language}</strong>
+                <strong><InlineResumeField value={lang.language} target={{ section: 'languages', index: i, field: 'language' }} enabled={inlineEditing} /></strong>
                 {lang.fluency && <span style={{ color: 'var(--resume-dim)', marginLeft: '4px' }}>({lang.fluency})</span>}
               </span>
             ))}
@@ -206,12 +219,12 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
           <div key={i} className="resume-item" style={{ marginTop: '10px' }}>
             <div className="resume-item-header">
               <div>
-                <span style={{ fontWeight: 600, fontSize: '15px' }}>{item.title}</span>
+                <InlineResumeField value={item.title} target={{ section: 'custom-item', sectionId, index: i, field: 'title' }} enabled={inlineEditing} style={{ fontWeight: 600, fontSize: '15px' }} />
                 {item.subtitle && <span style={{ color: 'var(--resume-muted)' }}> · {item.subtitle}</span>}
               </div>
               {item.date && <span className="resume-item-date">{item.date}</span>}
             </div>
-            {item.description && <div style={{ color: 'var(--resume-muted)', marginTop: '2px' }}><MarkdownRenderer content={item.description} /></div>}
+            {item.description && <div style={{ color: 'var(--resume-muted)', marginTop: '2px' }}><InlineResumeField value={item.description} target={{ section: 'custom-item', sectionId, index: i, field: 'description' }} enabled={inlineEditing} markdown /></div>}
             {item.highlights.length > 0 && (
               <ul className="resume-highlights">
                 {item.highlights.map((h, j) => <li key={j}><MarkdownRenderer content={h} /></li>)}
@@ -243,6 +256,7 @@ export default function ModernTemplate({ resume, onSectionClick }: Props) {
         style_config={style}
         sectionClickStyle={sectionClickStyle}
         onClickBasics={handleClick('basics')}
+        inlineEditing={inlineEditing}
       />
 
       {/* Main content — vertical flow */}

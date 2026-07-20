@@ -6,6 +6,7 @@ import {
   DeleteOutlined,
   DownOutlined,
   EyeOutlined,
+  EditOutlined,
   FormatPainterOutlined,
   GlobalOutlined,
   HolderOutlined,
@@ -22,7 +23,7 @@ import {
   ZoomOutOutlined,
 } from '@ant-design/icons';
 import { Button, Empty, Switch, message, Popconfirm } from 'antd';
-import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
@@ -146,6 +147,8 @@ export default function EditorPage() {
   const previewRef = useRef<HTMLDivElement>(null);
   const publicPreviewRef = useRef<HTMLDivElement>(null);
   const previewPanelRef = useRef<HTMLDivElement>(null);
+  const previewViewportRef = useRef<HTMLDivElement>(null);
+  const previousPreviewZoomRef = useRef(0.55);
   const [fitScale, setFitScale] = useState(0.55);
   const [previewZoom, setPreviewZoom] = useState(0.55);
   const [isPreviewFit, setIsPreviewFit] = useState(true);
@@ -161,6 +164,7 @@ export default function EditorPage() {
   const [hydrated, setHydrated] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activePanel, setActivePanel] = useState<'editor' | 'style' | 'public'>('editor');
+  const [inlineEditing, setInlineEditing] = useState(true);
 
   // Wait for zustand persist hydration before doing anything (both stores)
   useEffect(() => {
@@ -194,12 +198,13 @@ export default function EditorPage() {
   const pageWidthMM = resume ? getPageWidthMM(resume.style_config.page_size) : 210;
   useEffect(() => {
     const panel = previewPanelRef.current;
+    const viewport = previewViewportRef.current;
     if (!panel) return;
     const calcScale = () => {
-      const panelWidth = panel.clientWidth;
       const PAGE_WIDTH_PX = pageWidthMM * (96 / 25.4); // mm to px at 96dpi
-      const padding = 48; // 24px each side
-      const available = panelWidth - padding;
+      // Prefer the actual scroll viewport width: it already excludes panel
+      // padding and the reserved vertical scrollbar gutter.
+      const available = viewport?.clientWidth ?? panel.clientWidth - 48;
       const scale = Math.min(available / PAGE_WIDTH_PX, 1);
       const nextFitScale = Math.max(scale, 0.3);
       setFitScale(nextFitScale);
@@ -208,6 +213,7 @@ export default function EditorPage() {
     calcScale();
     const ro = new ResizeObserver(calcScale);
     ro.observe(panel);
+    if (viewport) ro.observe(viewport);
     return () => ro.disconnect();
   }, [pageWidthMM, isPreviewFit]);
 
@@ -220,6 +226,26 @@ export default function EditorPage() {
     setIsPreviewFit(false);
     setPreviewZoom(level);
   };
+
+  // Keep the same part of the page under the viewport center while zooming.
+  // The canvas itself follows previewZoom, so the scroll range always matches
+  // the real visual size of the scaled resume.
+  useLayoutEffect(() => {
+    const viewport = previewViewportRef.current;
+    const previousZoom = previousPreviewZoomRef.current;
+    previousPreviewZoomRef.current = previewZoom;
+    if (!viewport || previousZoom === previewZoom || isPreviewFit) return;
+
+    const centerX = viewport.scrollLeft + viewport.clientWidth / 2;
+    const centerY = viewport.scrollTop + viewport.clientHeight / 2;
+    const ratio = previewZoom / previousZoom;
+
+    const frame = requestAnimationFrame(() => {
+      viewport.scrollLeft = centerX * ratio - viewport.clientWidth / 2;
+      viewport.scrollTop = centerY * ratio - viewport.clientHeight / 2;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [previewZoom, isPreviewFit]);
 
   useEffect(() => {
     if (!id || !hydrated) return;
@@ -539,7 +565,7 @@ export default function EditorPage() {
       />
 
       {/* ── Three Panel Layout ── */}
-      <div className="editor-layout">
+      <div className={`editor-layout ${inlineEditing && !isPublicMode ? 'editor-layout--wysiwyg' : ''}`}>
         {/* Panel 1: Left Module Sidebar */}
         <div className={`module-sidebar ${sidebarCollapsed ? 'module-sidebar--collapsed' : ''}`}>
           <div className="module-sidebar__header">
@@ -781,7 +807,19 @@ export default function EditorPage() {
 
         {/* Panel 3: Right Preview Area */}
         <div className="preview-panel" ref={previewPanelRef}>
-          <div className="preview-panel__toolbar" role="toolbar" aria-label="预览缩放">
+          <div className="preview-panel__toolbar" role="toolbar" aria-label="简历预览工具">
+            {!isPublicMode && (
+              <button
+                type="button"
+                className={`preview-panel__edit-button ${inlineEditing ? 'preview-panel__edit-button--active' : ''}`}
+                onClick={() => setInlineEditing((current) => !current)}
+                aria-pressed={inlineEditing}
+                title="开启后可直接点击预览中的文字进行编辑"
+              >
+                <EditOutlined />
+                {inlineEditing ? '退出直接编辑' : '直接编辑'}
+              </button>
+            )}
             <button type="button" className="preview-panel__zoom-button" onClick={() => adjustPreviewZoom(-0.1)} aria-label="缩小预览">
               <ZoomOutOutlined />
             </button>
@@ -809,28 +847,34 @@ export default function EditorPage() {
             <button type="button" className="preview-panel__zoom-button" onClick={() => adjustPreviewZoom(0.1)} aria-label="放大预览">
               <ZoomInOutlined />
             </button>
-            <span className="preview-panel__zoom-hint">局部缩放</span>
+            <span className="preview-panel__zoom-hint">
+              {!isPublicMode && inlineEditing ? '点击文字修改' : '局部缩放'}
+            </span>
           </div>
-          <div
-            className="preview-panel__canvas"
-            style={{ width: `${pageWidthMM * (96 / 25.4) * fitScale}px` }}
-          >
+          <div className="preview-panel__viewport" ref={previewViewportRef}>
             <div
-              className="preview-panel__scaler"
-              style={{
-                // The canvas width stays at the fitted width. Only its inner
-                // page grows, allowing local horizontal/vertical scrolling.
-                zoom: previewZoom,
-                width: `${pageWidthMM}mm`,
-              }}
+              className="preview-panel__canvas"
+              style={{ width: `${pageWidthMM * (96 / 25.4) * previewZoom}px` }}
             >
-              <SectionErrorBoundary name="简历预览">
-                {isPublicMode ? (
-                  <RedactedPreview ref={publicPreviewRef} />
-                ) : (
-                  <ResumePreview ref={previewRef} onSectionClick={scrollToSection} />
-                )}
-              </SectionErrorBoundary>
+              <div
+                className="preview-panel__scaler"
+                style={{
+                  zoom: previewZoom,
+                  width: `${pageWidthMM}mm`,
+                }}
+              >
+                <SectionErrorBoundary name="简历预览">
+                  {isPublicMode ? (
+                    <RedactedPreview ref={publicPreviewRef} />
+                  ) : (
+                    <ResumePreview
+                      ref={previewRef}
+                      onSectionClick={scrollToSection}
+                      inlineEditing={inlineEditing}
+                    />
+                  )}
+                </SectionErrorBoundary>
+              </div>
             </div>
           </div>
         </div>

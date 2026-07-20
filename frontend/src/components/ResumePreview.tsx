@@ -12,9 +12,10 @@ const PAGE_HEIGHTS: Record<string, number> = {
 
 interface Props {
   onSectionClick?: (sectionKey: string) => void;
+  inlineEditing?: boolean;
 }
 
-const ResumePreview = forwardRef<HTMLDivElement, Props>(({ onSectionClick }, ref) => {
+const ResumePreview = forwardRef<HTMLDivElement, Props>(({ onSectionClick, inlineEditing = false }, ref) => {
   const resume = useResumeStore((s) =>
     s.resumes.find((r) => r.id === s.activeResumeId) ?? null,
   );
@@ -38,7 +39,7 @@ const ResumePreview = forwardRef<HTMLDivElement, Props>(({ onSectionClick }, ref
         pageWidthMM={pageWidthMM}
         pageHeightMM={pageHeightMM}
       >
-        <Template resume={resume} onSectionClick={onSectionClick} />
+        <Template resume={resume} onSectionClick={onSectionClick} inlineEditing={inlineEditing} />
       </PagedPreview>
     </div>
   );

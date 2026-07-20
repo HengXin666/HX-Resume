@@ -1,15 +1,18 @@
 import type { ResumeData, SectionKey } from '../types/resume';
+import { DEFAULT_DEPARTMENT_POSITION_SEPARATOR } from '../types/resume';
 import '../styles/resume-print.css';
 import { getVisibleSections, isBuiltinSection, getPageSizeVars, buildHeadingStyle } from './useSectionRenderer';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import HeaderSection from '../components/HeaderSection';
+import InlineResumeField from '../components/InlineResumeField';
 
 interface Props {
   resume: ResumeData;
   onSectionClick?: (sectionKey: string) => void;
+  inlineEditing?: boolean;
 }
 
-export default function ProfessionalTemplate({ resume, onSectionClick }: Props) {
+export default function ProfessionalTemplate({ resume, onSectionClick, inlineEditing = false }: Props) {
   const { basics, education, work, skills_text, projects, awards, languages, interests, style_config: style } = resume;
   const visibleSections = getVisibleSections(resume);
 
@@ -87,7 +90,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
         >
           {renderHeading('个人简介')}
           <div style={{ padding: '10px 14px', background: `${style.primary_color}08`, borderLeft: `3px solid ${style.primary_color}`, borderRadius: '0 4px 4px 0' }}>
-            <MarkdownRenderer content={basics.summary} className="resume-summary" />
+          <InlineResumeField value={basics.summary} target={{ section: 'basics', field: 'summary' }} enabled={inlineEditing} markdown className="resume-summary" />
           </div>
         </div>
       ) : null,
@@ -117,21 +120,31 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
                   }} />}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontWeight: 700, fontSize: '15px' }}>{w.company}</span>
+                    <InlineResumeField value={w.company} target={{ section: 'work', index: i, field: 'company' }} enabled={inlineEditing} style={{ fontWeight: 700, fontSize: '15px' }} />
                       <span style={{ fontSize: '12px', color: 'var(--resume-dim)', fontWeight: 500 }}>
                         {w.start_date} ~ {w.end_date || '至今'}
                       </span>
                     </div>
                     {(w.department || w.position) && (
                       <div style={{ fontSize: '13px', color: style.primary_color, fontWeight: 500, marginTop: '2px' }}>
-                        {w.department}{w.department && w.position && ' '}{w.position}
+                      <InlineResumeField value={w.department} target={{ section: 'work', index: i, field: 'department' }} enabled={inlineEditing} />
+                      {w.department && w.position && (
+                        <InlineResumeField
+                          value={w.department_position_separator ?? DEFAULT_DEPARTMENT_POSITION_SEPARATOR}
+                          target={{ section: 'work', index: i, field: 'department_position_separator' }}
+                          enabled={inlineEditing}
+                          className="resume-work-separator"
+                          placeholder=""
+                        />
+                      )}
+                      <InlineResumeField value={w.position} target={{ section: 'work', index: i, field: 'position' }} enabled={inlineEditing} />
                       </div>
                     )}
                   </div>
                 </div>
                 {w.description && (
                   <div style={{ marginTop: '4px', color: 'var(--resume-body)' }}>
-                    <MarkdownRenderer content={w.description} />
+                  <InlineResumeField value={w.description} target={{ section: 'work', index: i, field: 'description' }} enabled={inlineEditing} markdown />
                   </div>
                 )}
               </div>
@@ -157,7 +170,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontWeight: 700, fontSize: '15px' }}>{p.name}</span>
+                  <InlineResumeField value={p.name} target={{ section: 'projects', index: i, field: 'name' }} enabled={inlineEditing} style={{ fontWeight: 700, fontSize: '15px' }} />
                   <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
                     {p.start_date}{p.end_date ? ` ~ ${p.end_date}` : ''}
                   </span>
@@ -175,7 +188,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
                 )}
                 {p.description && (
                   <div style={{ marginTop: '4px', color: 'var(--resume-body)' }}>
-                    <MarkdownRenderer content={p.description} />
+                  <InlineResumeField value={p.description} target={{ section: 'projects', index: i, field: 'description' }} enabled={inlineEditing} markdown />
                   </div>
                 )}
               </div>
@@ -202,7 +215,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <div>
-                    <span style={{ fontWeight: 700 }}>{e.institution}</span>
+                  <InlineResumeField value={e.institution} target={{ section: 'education', index: i, field: 'institution' }} enabled={inlineEditing} style={{ fontWeight: 700 }} />
                     {e.area && <span style={{ color: 'var(--resume-muted)', marginLeft: '8px' }}>{e.area}{e.study_type && ` · ${e.study_type}`}</span>}
                   </div>
                   <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
@@ -211,7 +224,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
                 </div>
                 {e.description && (
                   <div style={{ marginTop: '4px' }}>
-                    <MarkdownRenderer content={e.description} />
+                  <InlineResumeField value={e.description} target={{ section: 'education', index: i, field: 'description' }} enabled={inlineEditing} markdown />
                   </div>
                 )}
               </div>
@@ -229,7 +242,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
           onClick={handleClick('skills')}
         >
           {renderHeading('专业技能')}
-          <MarkdownRenderer content={skills_text} />
+          <InlineResumeField value={skills_text} target={{ section: 'skills', field: 'skills_text' }} enabled={inlineEditing} markdown />
         </div>
       ) : null,
 
@@ -246,12 +259,12 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
             <div key={i} data-section="awards" data-item-index={i} className="resume-item">
               <div className="resume-item-header">
                 <div>
-                  <span style={{ fontWeight: 600 }}>{a.title}</span>
+                  <InlineResumeField value={a.title} target={{ section: 'awards', index: i, field: 'title' }} enabled={inlineEditing} style={{ fontWeight: 600 }} />
                   {a.awarder && <span style={{ color: 'var(--resume-muted)', marginLeft: '8px' }}>{a.awarder}</span>}
                 </div>
                 {a.date && <span className="resume-item-date">{a.date}</span>}
               </div>
-              {a.summary && <div className="resume-item-subtitle"><MarkdownRenderer content={a.summary} /></div>}
+              {a.summary && <div className="resume-item-subtitle"><InlineResumeField value={a.summary} target={{ section: 'awards', index: i, field: 'summary' }} enabled={inlineEditing} markdown /></div>}
             </div>
           ))}
         </div>
@@ -269,7 +282,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {languages.map((lang, i) => (
               <span key={i} style={{ fontSize: '13px', padding: '4px 12px', background: `${style.primary_color}10`, borderRadius: '4px', border: `1px solid ${style.primary_color}25` }}>
-                <strong>{lang.language}</strong>
+                <strong><InlineResumeField value={lang.language} target={{ section: 'languages', index: i, field: 'language' }} enabled={inlineEditing} /></strong>
                 {lang.fluency && <span style={{ color: 'var(--resume-dim)', marginLeft: '4px' }}>({lang.fluency})</span>}
               </span>
             ))}
@@ -308,12 +321,12 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
           <div key={i} className="resume-item">
             <div className="resume-item-header">
               <div>
-                <span className="resume-item-title">{item.title}</span>
+                <InlineResumeField value={item.title} target={{ section: 'custom-item', sectionId, index: i, field: 'title' }} enabled={inlineEditing} className="resume-item-title" />
                 {item.subtitle && <span style={{ color: 'var(--resume-muted)', marginLeft: '8px' }}>{item.subtitle}</span>}
               </div>
               {item.date && <span className="resume-item-date">{item.date}</span>}
             </div>
-            {item.description && <div className="resume-item-subtitle"><MarkdownRenderer content={item.description} /></div>}
+            {item.description && <div className="resume-item-subtitle"><InlineResumeField value={item.description} target={{ section: 'custom-item', sectionId, index: i, field: 'description' }} enabled={inlineEditing} markdown /></div>}
             {item.highlights.length > 0 && (
               <ul className="resume-highlights">
                 {item.highlights.map((h, j) => <li key={j}><MarkdownRenderer content={h} /></li>)}
@@ -345,6 +358,7 @@ export default function ProfessionalTemplate({ resume, onSectionClick }: Props) 
         style_config={style}
         sectionClickStyle={sectionClickStyle}
         onClickBasics={handleClick('basics')}
+        inlineEditing={inlineEditing}
       />
 
       {visibleSections.map((key) =>

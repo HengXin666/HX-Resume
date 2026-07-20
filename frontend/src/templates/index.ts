@@ -10,7 +10,11 @@ export interface TemplateInfo {
   id: string;
   name: string;
   description: string;
-  component: ComponentType<{ resume: ResumeData; onSectionClick?: (sectionKey: string) => void }>;
+  component: ComponentType<{
+    resume: ResumeData;
+    onSectionClick?: (sectionKey: string) => void;
+    inlineEditing?: boolean;
+  }>;
   thumbnail: string; // emoji placeholder
 }
 

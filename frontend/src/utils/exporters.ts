@@ -217,6 +217,7 @@ export async function exportToPDF(
   element: HTMLElement,
   _filename: string = 'resume.pdf',
 ): Promise<void> {
+  void _filename; // Native print dialog owns the final PDF filename.
   // Detect page size from CSS variable
   const computedStyle = getComputedStyle(element);
   const pageWidthVar = computedStyle.getPropertyValue('--page-width').trim() || '210mm';
@@ -419,8 +420,11 @@ export function exportToMarkdown(resume: ResumeData): string {
     lines.push('## 工作经历');
     lines.push('');
     for (const w of work) {
-      const dept = w.department ? ` · ${w.department}` : '';
-      lines.push(`### ${w.position}${dept} @ ${w.company}`);
+      const separator = w.department_position_separator ?? '·';
+      const role = [w.department, w.position]
+        .filter(Boolean)
+        .join(separator ? ` ${separator} ` : ' ');
+      lines.push(`### ${role} @ ${w.company}`);
       lines.push(`*${w.start_date} - ${w.end_date || '至今'}*`);
       lines.push('');
       if (w.description) lines.push(w.description);

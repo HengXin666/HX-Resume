@@ -16,7 +16,13 @@ import type {
   StyleConfig,
   WorkItem,
 } from '../types/resume';
-import { DEFAULT_BASICS, DEFAULT_SECTION_ORDER, DEFAULT_SECTION_VISIBILITY, createEmptyResume } from '../types/resume';
+import {
+  DEFAULT_BASICS,
+  DEFAULT_DEPARTMENT_POSITION_SEPARATOR,
+  DEFAULT_SECTION_ORDER,
+  DEFAULT_SECTION_VISIBILITY,
+  createEmptyResume,
+} from '../types/resume';
 
 interface ResumeStore {
   // Multi-resume state
@@ -130,6 +136,16 @@ function normalizeBasics(value: Partial<Basics> | null | undefined): Basics {
     show_header_divider: value?.show_header_divider ?? DEFAULT_BASICS.show_header_divider,
     avatar_position: value?.avatar_position ?? DEFAULT_BASICS.avatar_position,
     avatar_ratio: value?.avatar_ratio ?? DEFAULT_BASICS.avatar_ratio,
+  };
+}
+
+/** Keep work presentation fields compatible with older/imported resumes. */
+function normalizeWorkItem(value: WorkItem): WorkItem {
+  return {
+    ...value,
+    department: value.department ?? '',
+    department_position_separator:
+      value.department_position_separator ?? DEFAULT_DEPARTMENT_POSITION_SEPARATOR,
   };
 }
 
@@ -302,10 +318,10 @@ export const useResumeStore = create<ResumeStore>()(
         }))),
 
       setWork: (work) =>
-        set((s) => patchActive(s, () => ({ work }))),
+        set((s) => patchActive(s, () => ({ work: work.map(normalizeWorkItem) }))),
       addWork: (item) =>
         set((s) => patchActive(s, (r) => ({
-          work: [...r.work, item],
+          work: [...r.work, normalizeWorkItem(item)],
         }))),
       removeWork: (index) =>
         set((s) => patchActive(s, (r) => ({
@@ -313,7 +329,7 @@ export const useResumeStore = create<ResumeStore>()(
         }))),
       updateWork: (index, item) =>
         set((s) => patchActive(s, (r) => ({
-          work: r.work.map((w, i) => (i === index ? item : w)),
+          work: r.work.map((w, i) => (i === index ? normalizeWorkItem(item) : w)),
         }))),
 
       updateSkillsText: (text) =>
@@ -460,6 +476,7 @@ export const useResumeStore = create<ResumeStore>()(
           ...base,
           ...data,
           basics: normalizeBasics(data.basics),
+          work: (data.work ?? base.work).map(normalizeWorkItem),
           id: crypto.randomUUID(),
           sort_order: get().resumes.length,
           created_at: new Date().toISOString(),
@@ -485,6 +502,7 @@ export const useResumeStore = create<ResumeStore>()(
           ...createEmptyResume(),
           ...r,
           basics: normalizeBasics(r.basics),
+          work: (r.work ?? []).map(normalizeWorkItem),
           versions: r.versions ?? [],
           sort_order: r.sort_order ?? i,
         }));
@@ -497,7 +515,7 @@ export const useResumeStore = create<ResumeStore>()(
     }),
     {
       name: 'hx-resume-data',
-      version: 11,
+      version: 12,
       partialize: (state) => ({
         resumes: state.resumes,
         activeResumeId: state.activeResumeId,
@@ -625,6 +643,13 @@ export const useResumeStore = create<ResumeStore>()(
           state.resumes = state.resumes.map((r) => ({
             ...r,
             basics: normalizeBasics(r.basics),
+          }));
+        }
+        if (version < 12 && state.resumes) {
+          // Migrate to v12: add a customizable department/position separator.
+          state.resumes = state.resumes.map((r) => ({
+            ...r,
+            work: (r.work ?? []).map(normalizeWorkItem),
           }));
         }
         return state;

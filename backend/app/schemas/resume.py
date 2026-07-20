@@ -51,6 +51,7 @@ class WorkItem(BaseModel):
     company: str = ""
     department: str = ""
     position: str = ""
+    department_position_separator: str = "·"
     website: str = ""
     start_date: str = ""
     end_date: str = ""

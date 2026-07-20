@@ -510,6 +510,16 @@ body {
   height: calc(100vh - 56px);
 }
 
+/* Direct-edit focus mode: the resume itself becomes the editor. */
+.editor-layout--wysiwyg .module-sidebar,
+.editor-layout--wysiwyg .form-editor-panel {
+  display: none;
+}
+
+.editor-layout--wysiwyg .preview-panel {
+  flex: 1 1 100%;
+}
+
 /* ── Panel 1: Module Sidebar ── */
 .module-sidebar {
   width: 220px;
@@ -861,7 +871,7 @@ body {
 .preview-panel {
   flex: 1;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   position: relative;
   flex-direction: column;
@@ -886,6 +896,8 @@ body {
   background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .preview-panel__zoom-button {
@@ -902,6 +914,27 @@ body {
 .preview-panel__zoom-button:hover {
   color: var(--neon-cyan);
   border-color: var(--neon-cyan);
+}
+
+.preview-panel__edit-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.preview-panel__edit-button:hover,
+.preview-panel__edit-button--active {
+  color: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  background: color-mix(in srgb, var(--neon-cyan) 10%, var(--bg-tertiary));
 }
 
 .preview-panel__zoom-select {
@@ -928,11 +961,20 @@ body {
   flex-shrink: 0;
 }
 
-.preview-panel__canvas {
-  flex: 0 0 auto;
-  max-width: 100%;
+.preview-panel__viewport {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
+}
+
+.preview-panel__canvas {
+  flex: 0 0 auto;
+  max-width: none;
+  min-height: 1px;
+  margin: 0 auto;
+  overflow: visible;
 }
 
 /* ── Responsive: collapse sidebar on narrow screens ── */

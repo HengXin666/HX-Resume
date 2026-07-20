@@ -9,6 +9,8 @@
 import type { CSSProperties } from 'react';
 import type { Basics, StyleConfig } from '../types/resume';
 import { AVATAR_RATIOS } from '../types/resume';
+import InlineResumeField from './InlineResumeField';
+import type { InlineFieldTarget } from './InlineResumeField';
 
 /* ── SVG 联系图标 ─────────────────────────── */
 const PhoneIcon = ({ color = 'currentColor', size = 13 }) => (
@@ -45,16 +47,20 @@ interface ContactItemProps {
   href?: string;
   style?: CSSProperties;
   onClick?: (e: React.MouseEvent) => void;
+  inlineEditing?: boolean;
+  editableTarget?: InlineFieldTarget;
 }
 
-function ContactItem({ icon, text, href, style, onClick }: ContactItemProps) {
+function ContactItem({ icon, text, href, style, onClick, inlineEditing, editableTarget }: ContactItemProps) {
   const inner = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', ...style }}>
       {icon}
-      <span>{text}</span>
+      {editableTarget ? (
+        <InlineResumeField value={text} target={editableTarget} enabled={inlineEditing} />
+      ) : <span>{text}</span>}
     </span>
   );
-  if (href) {
+  if (href && !inlineEditing) {
     return (
       <a
         href={href}
@@ -105,18 +111,18 @@ function Avatar({ src, height, border, ratio }: {
 
 /* ── 收集联系信息 ─────────────────────────── */
 function useContactItems(basics: Basics, iconColor: string) {
-  const items: { key: string; icon: React.ReactNode; text: string; href?: string }[] = [];
+  const items: { key: string; icon: React.ReactNode; text: string; href?: string; target: InlineFieldTarget }[] = [];
   if (basics.phone) {
-    items.push({ key: 'phone', icon: <PhoneIcon color={iconColor} />, text: basics.phone });
+    items.push({ key: 'phone', icon: <PhoneIcon color={iconColor} />, text: basics.phone, target: { section: 'basics', field: 'phone' } });
   }
   if (basics.email) {
-    items.push({ key: 'email', icon: <EmailIcon color={iconColor} />, text: basics.email, href: `mailto:${basics.email}` });
+    items.push({ key: 'email', icon: <EmailIcon color={iconColor} />, text: basics.email, href: `mailto:${basics.email}`, target: { section: 'basics', field: 'email' } });
   }
   if (basics.url) {
-    items.push({ key: 'url', icon: <LinkIcon color={iconColor} />, text: basics.url.replace(/^https?:\/\//, ''), href: basics.url });
+    items.push({ key: 'url', icon: <LinkIcon color={iconColor} />, text: basics.url, href: basics.url, target: { section: 'basics', field: 'url' } });
   }
   if (basics.location?.city) {
-    items.push({ key: 'city', icon: <LocationIcon color={iconColor} />, text: basics.location.city });
+    items.push({ key: 'city', icon: <LocationIcon color={iconColor} />, text: basics.location.city, target: { section: 'basics', field: 'location.city' } });
   }
   return items;
 }
@@ -142,16 +148,18 @@ export interface HeaderSectionProps {
   style_config: StyleConfig;
   sectionClickStyle?: CSSProperties;
   onClickBasics?: (e: React.MouseEvent) => void;
+  inlineEditing?: boolean;
 }
 
-export default function HeaderSection({ basics, style_config: style, sectionClickStyle = {}, onClickBasics }: HeaderSectionProps) {
+export default function HeaderSection({ basics, style_config: style, sectionClickStyle, onClickBasics, inlineEditing = false }: HeaderSectionProps) {
   const layout = basics.header_layout || 'classic-center';
   const pc = style.primary_color;
 
   const wrapperProps = {
     className: 'resume-section--clickable',
-    style: sectionClickStyle,
     onClick: onClickBasics,
+    inlineEditing,
+    clickStyle: sectionClickStyle,
   };
 
   switch (layout) {
@@ -181,6 +189,25 @@ interface LayoutProps {
   style: StyleConfig;
   className?: string;
   onClick?: (e: React.MouseEvent) => void;
+  inlineEditing?: boolean;
+  clickStyle?: CSSProperties;
+}
+
+function BasicsText({ basics, field, inlineEditing, placeholder }: {
+  basics: Basics;
+  field: 'name' | 'label';
+  inlineEditing?: boolean;
+  placeholder: string;
+}) {
+  if (!inlineEditing) return <>{basics[field] || placeholder}</>;
+  return (
+    <InlineResumeField
+      value={basics[field]}
+      target={{ section: 'basics', field }}
+      enabled={inlineEditing}
+      placeholder={placeholder}
+    />
+  );
 }
 
 /* ═══════════════════════════════════════
@@ -188,7 +215,7 @@ interface LayoutProps {
    无头像时：姓名+职位+联系方式 全部居中
    有头像时：头像在用户选的一侧，姓名+联系居中
    ═══════════════════════════════════════ */
-function LayoutClassicCenter({ basics, pc, style, className, onClick }: LayoutProps) {
+function LayoutClassicCenter({ basics, pc, style, className, onClick, inlineEditing, clickStyle }: LayoutProps) {
   const contacts = useContactItems(basics, pc);
   const showDivider = basics.show_header_divider !== false;
   const pos = basics.avatar_position || 'left';
@@ -200,7 +227,7 @@ function LayoutClassicCenter({ basics, pc, style, className, onClick }: LayoutPr
   ) : null;
 
   return (
-    <div className={className} onClick={onClick} style={{ marginBottom: `${style.section_gap}px` }}>
+    <div className={className} onClick={onClick} style={{ marginBottom: `${style.section_gap}px`, ...clickStyle }}>
       {hasAvatar ? (
         <div style={{
           display: 'flex',
@@ -211,11 +238,11 @@ function LayoutClassicCenter({ basics, pc, style, className, onClick }: LayoutPr
           {avatarEl}
           <div style={{ flex: 1, textAlign: 'center' }}>
             <h1 style={{ marginBottom: '2px', fontSize: '24px' }}>
-              {basics.name || '您的姓名'}
+              <BasicsText basics={basics} field="name" inlineEditing={inlineEditing} placeholder="您的姓名" />
             </h1>
-            {basics.label && (
+            {(basics.label || inlineEditing) && (
               <div style={{ fontSize: '14px', color: 'var(--resume-muted)', marginBottom: '6px' }}>
-                {basics.label}
+                <BasicsText basics={basics} field="label" inlineEditing={inlineEditing} placeholder="求职方向" />
               </div>
             )}
             <div
@@ -227,7 +254,7 @@ function LayoutClassicCenter({ basics, pc, style, className, onClick }: LayoutPr
               }}
             >
               {contacts.map((c) => (
-                <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} onClick={(e) => e.stopPropagation()} />
+                <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} editableTarget={c.target} inlineEditing={inlineEditing} onClick={(e) => e.stopPropagation()} />
               ))}
             </div>
           </div>
@@ -235,11 +262,11 @@ function LayoutClassicCenter({ basics, pc, style, className, onClick }: LayoutPr
       ) : (
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ marginBottom: '2px', fontSize: '24px' }}>
-            {basics.name || '您的姓名'}
+            <BasicsText basics={basics} field="name" inlineEditing={inlineEditing} placeholder="您的姓名" />
           </h1>
-          {basics.label && (
+          {(basics.label || inlineEditing) && (
             <div style={{ fontSize: '14px', color: 'var(--resume-muted)', marginBottom: '6px' }}>
-              {basics.label}
+              <BasicsText basics={basics} field="label" inlineEditing={inlineEditing} placeholder="求职方向" />
             </div>
           )}
           <div
@@ -251,7 +278,7 @@ function LayoutClassicCenter({ basics, pc, style, className, onClick }: LayoutPr
             }}
           >
             {contacts.map((c) => (
-              <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} onClick={(e) => e.stopPropagation()} />
+              <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} editableTarget={c.target} inlineEditing={inlineEditing} onClick={(e) => e.stopPropagation()} />
             ))}
           </div>
         </div>
@@ -266,7 +293,7 @@ function LayoutClassicCenter({ basics, pc, style, className, onClick }: LayoutPr
    左：头像+姓名+头衔  右：联系方式竖排
    底部主色粗线分隔（可选）
    ═══════════════════════════════════════ */
-function LayoutLeftRight({ basics, pc, style, className, onClick }: LayoutProps) {
+function LayoutLeftRight({ basics, pc, className, onClick, inlineEditing, clickStyle }: LayoutProps) {
   const contacts = useContactItems(basics, pc);
   const showDivider = basics.show_header_divider !== false;
   const pos = basics.avatar_position || 'left';
@@ -279,11 +306,11 @@ function LayoutLeftRight({ basics, pc, style, className, onClick }: LayoutProps)
   const nameBlock = (
     <div>
       <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0, letterSpacing: '1px' }}>
-        {basics.name || '您的姓名'}
+        <BasicsText basics={basics} field="name" inlineEditing={inlineEditing} placeholder="您的姓名" />
       </h1>
-      {basics.label && (
+      {(basics.label || inlineEditing) && (
         <div style={{ fontSize: '14px', color: 'var(--resume-muted)', marginTop: '2px', fontWeight: 500 }}>
-          {basics.label}
+          <BasicsText basics={basics} field="label" inlineEditing={inlineEditing} placeholder="求职方向" />
         </div>
       )}
     </div>
@@ -302,7 +329,7 @@ function LayoutLeftRight({ basics, pc, style, className, onClick }: LayoutProps)
   );
 
   return (
-    <div className={className} onClick={onClick} style={{ marginBottom: '6px' }}>
+    <div className={className} onClick={onClick} style={{ marginBottom: '6px', ...clickStyle }}>
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
         paddingBottom: showDivider ? '10px' : '6px',
@@ -316,7 +343,7 @@ function LayoutLeftRight({ basics, pc, style, className, onClick }: LayoutProps)
           <div style={{ textAlign: 'right', fontSize: '12px', color: 'var(--resume-dim)', lineHeight: 1.9 }}>
             {contacts.map((c) => (
               <div key={c.key}>
-                <ContactItem icon={c.icon} text={c.text} href={c.href} style={{ justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()} />
+                <ContactItem icon={c.icon} text={c.text} href={c.href} editableTarget={c.target} inlineEditing={inlineEditing} style={{ justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()} />
               </div>
             ))}
           </div>
@@ -331,7 +358,7 @@ function LayoutLeftRight({ basics, pc, style, className, onClick }: LayoutProps)
    Layout 3: 渐变横幅
    头像在用户选的一侧 + 信息，底部带主色渐变色条装饰
    ═══════════════════════════════════════ */
-function LayoutBannerGradient({ basics, pc, style, className, onClick }: LayoutProps) {
+function LayoutBannerGradient({ basics, pc, style, className, onClick, inlineEditing, clickStyle }: LayoutProps) {
   const contacts = useContactItems(basics, pc);
   const showDivider = basics.show_header_divider !== false;
   const pos = basics.avatar_position || 'left';
@@ -342,7 +369,7 @@ function LayoutBannerGradient({ basics, pc, style, className, onClick }: LayoutP
   ) : null;
 
   return (
-    <div className={className} onClick={onClick} style={{ marginBottom: `${style.section_gap}px` }}>
+    <div className={className} onClick={onClick} style={{ marginBottom: `${style.section_gap}px`, ...clickStyle }}>
       <div style={{
         display: 'flex', alignItems: 'flex-start', gap: '16px',
         flexDirection: pos === 'right' ? 'row-reverse' : 'row',
@@ -355,11 +382,11 @@ function LayoutBannerGradient({ basics, pc, style, className, onClick }: LayoutP
         {avatarEl}
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: '26px', fontWeight: 700, margin: 0 }}>
-            {basics.name || '您的姓名'}
+            <BasicsText basics={basics} field="name" inlineEditing={inlineEditing} placeholder="您的姓名" />
           </h1>
-          {basics.label && (
+          {(basics.label || inlineEditing) && (
             <div style={{ fontSize: '14px', color: 'var(--resume-muted)', marginTop: '3px', fontWeight: 500 }}>
-              {basics.label}
+              <BasicsText basics={basics} field="label" inlineEditing={inlineEditing} placeholder="求职方向" />
             </div>
           )}
           <div style={{
@@ -367,7 +394,7 @@ function LayoutBannerGradient({ basics, pc, style, className, onClick }: LayoutP
             marginTop: '8px', fontSize: '12px', color: 'var(--resume-dim)',
           }}>
             {contacts.map((c) => (
-              <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} onClick={(e) => e.stopPropagation()} />
+              <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} editableTarget={c.target} inlineEditing={inlineEditing} onClick={(e) => e.stopPropagation()} />
             ))}
           </div>
         </div>
@@ -387,7 +414,7 @@ function LayoutBannerGradient({ basics, pc, style, className, onClick }: LayoutP
    Layout 4: 照片侧栏
    头像在用户选的一侧 + 姓名/职位/联系信息
    ═══════════════════════════════════════ */
-function LayoutSidebarPhoto({ basics, pc, style, className, onClick }: LayoutProps) {
+function LayoutSidebarPhoto({ basics, pc, style, className, onClick, inlineEditing, clickStyle }: LayoutProps) {
   const contacts = useContactItems(basics, pc);
   const showDivider = basics.show_header_divider !== false;
   const pos = basics.avatar_position || 'left';
@@ -407,7 +434,7 @@ function LayoutSidebarPhoto({ basics, pc, style, className, onClick }: LayoutPro
   );
 
   return (
-    <div className={className} onClick={onClick} style={{ marginBottom: `${style.section_gap}px` }}>
+    <div className={className} onClick={onClick} style={{ marginBottom: `${style.section_gap}px`, ...clickStyle }}>
       <div style={{
         display: 'flex', gap: '18px', alignItems: 'flex-start',
         flexDirection: pos === 'right' ? 'row-reverse' : 'row',
@@ -417,11 +444,11 @@ function LayoutSidebarPhoto({ basics, pc, style, className, onClick }: LayoutPro
         {avatarEl}
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: '26px', fontWeight: 700, margin: 0 }}>
-            {basics.name || '您的姓名'}
+            <BasicsText basics={basics} field="name" inlineEditing={inlineEditing} placeholder="您的姓名" />
           </h1>
-          {basics.label && (
+          {(basics.label || inlineEditing) && (
             <div style={{ fontSize: '14px', color: 'var(--resume-muted)', marginTop: '3px', fontWeight: 500 }}>
-              {basics.label}
+              <BasicsText basics={basics} field="label" inlineEditing={inlineEditing} placeholder="求职方向" />
             </div>
           )}
           <div style={{
@@ -429,7 +456,7 @@ function LayoutSidebarPhoto({ basics, pc, style, className, onClick }: LayoutPro
             marginTop: '8px', fontSize: '12px', color: 'var(--resume-dim)',
           }}>
             {contacts.map((c) => (
-              <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} onClick={(e) => e.stopPropagation()} />
+              <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} editableTarget={c.target} inlineEditing={inlineEditing} onClick={(e) => e.stopPropagation()} />
             ))}
           </div>
         </div>
@@ -442,7 +469,7 @@ function LayoutSidebarPhoto({ basics, pc, style, className, onClick }: LayoutPro
    Layout 5: 紧凑单行
    一行显示所有信息，节省空间
    ═══════════════════════════════════════ */
-function LayoutCompactInline({ basics, pc, style, className, onClick }: LayoutProps) {
+function LayoutCompactInline({ basics, pc, style, className, onClick, inlineEditing, clickStyle }: LayoutProps) {
   const contacts = useContactItems(basics, 'var(--resume-dim)');
   const showDivider = basics.show_header_divider !== false;
   const pos = basics.avatar_position || 'left';
@@ -460,6 +487,7 @@ function LayoutCompactInline({ basics, pc, style, className, onClick }: LayoutPr
         marginBottom: `${style.section_gap}px`,
         paddingBottom: '8px',
         borderBottom: showDivider ? `2px solid ${pc}` : 'none',
+        ...clickStyle,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
@@ -469,20 +497,20 @@ function LayoutCompactInline({ basics, pc, style, className, onClick }: LayoutPr
         }}>
           {avatarEl}
           <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, whiteSpace: 'nowrap' }}>
-            {basics.name || '您的姓名'}
+            <BasicsText basics={basics} field="name" inlineEditing={inlineEditing} placeholder="您的姓名" />
           </h1>
         </div>
-        {basics.label && (
+        {(basics.label || inlineEditing) && (
           <span style={{
             fontSize: '13px', color: 'var(--resume-muted)',
             borderLeft: `2px solid ${pc}40`, paddingLeft: '10px',
           }}>
-            {basics.label}
+            <BasicsText basics={basics} field="label" inlineEditing={inlineEditing} placeholder="求职方向" />
           </span>
         )}
         <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', gap: '4px 12px', fontSize: '11px', color: 'var(--resume-dim)' }}>
           {contacts.map((c) => (
-            <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} onClick={(e) => e.stopPropagation()} />
+            <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} editableTarget={c.target} inlineEditing={inlineEditing} onClick={(e) => e.stopPropagation()} />
           ))}
         </div>
       </div>
@@ -494,7 +522,7 @@ function LayoutCompactInline({ basics, pc, style, className, onClick }: LayoutPr
    Layout 6: 现代卡片
    头像在用户选的一侧 + 信息，带精致的边框和背景
    ═══════════════════════════════════════ */
-function LayoutModernCard({ basics, pc, style, className, onClick }: LayoutProps) {
+function LayoutModernCard({ basics, pc, style, className, onClick, inlineEditing, clickStyle }: LayoutProps) {
   const contacts = useContactItems(basics, pc);
   const showDivider = basics.show_header_divider !== false;
   const pos = basics.avatar_position || 'left';
@@ -505,7 +533,7 @@ function LayoutModernCard({ basics, pc, style, className, onClick }: LayoutProps
   ) : null;
 
   return (
-    <div className={className} onClick={onClick} style={{ marginBottom: `${style.section_gap}px` }}>
+    <div className={className} onClick={onClick} style={{ marginBottom: `${style.section_gap}px`, ...clickStyle }}>
       <div style={{
         display: 'flex', alignItems: 'flex-start', gap: '16px',
         flexDirection: pos === 'right' ? 'row-reverse' : 'row',
@@ -517,11 +545,11 @@ function LayoutModernCard({ basics, pc, style, className, onClick }: LayoutProps
         {avatarEl}
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0 }}>
-            {basics.name || '您的姓名'}
+            <BasicsText basics={basics} field="name" inlineEditing={inlineEditing} placeholder="您的姓名" />
           </h1>
-          {basics.label && (
+          {(basics.label || inlineEditing) && (
             <div style={{ fontSize: '13px', color: 'var(--resume-muted)', marginTop: '4px', fontWeight: 500 }}>
-              {basics.label}
+              <BasicsText basics={basics} field="label" inlineEditing={inlineEditing} placeholder="求职方向" />
             </div>
           )}
           <div style={{
@@ -529,7 +557,7 @@ function LayoutModernCard({ basics, pc, style, className, onClick }: LayoutProps
             marginTop: '10px', fontSize: '12px', color: 'var(--resume-dim)',
           }}>
             {contacts.map((c) => (
-              <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} onClick={(e) => e.stopPropagation()} />
+              <ContactItem key={c.key} icon={c.icon} text={c.text} href={c.href} editableTarget={c.target} inlineEditing={inlineEditing} onClick={(e) => e.stopPropagation()} />
             ))}
           </div>
         </div>

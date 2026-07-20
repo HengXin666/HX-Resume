@@ -1,15 +1,18 @@
 import type { ResumeData, SectionKey } from '../types/resume';
+import { DEFAULT_DEPARTMENT_POSITION_SEPARATOR } from '../types/resume';
 import '../styles/resume-print.css';
 import { getVisibleSections, isBuiltinSection, getPageSizeVars, buildHeadingStyle } from './useSectionRenderer';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import HeaderSection from '../components/HeaderSection';
+import InlineResumeField from '../components/InlineResumeField';
 
 interface Props {
   resume: ResumeData;
   onSectionClick?: (sectionKey: string) => void;
+  inlineEditing?: boolean;
 }
 
-export default function MinimalTemplate({ resume, onSectionClick }: Props) {
+export default function MinimalTemplate({ resume, onSectionClick, inlineEditing = false }: Props) {
   const { basics, education, work, skills_text, projects, awards, languages, interests, style_config: style } = resume;
   const visibleSections = getVisibleSections(resume);
 
@@ -50,7 +53,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
     summary: () =>
       basics.summary ? (
         <div key="summary" className="resume-section--clickable" style={{ marginBottom: `${style.section_gap}px`, textAlign: 'center', maxWidth: '500px', margin: '0 auto 20px', ...sectionClickStyle }} onClick={handleClick('basics')}>
-          <MarkdownRenderer content={basics.summary} className="resume-summary" />
+          <InlineResumeField value={basics.summary} target={{ section: 'basics', field: 'summary' }} enabled={inlineEditing} markdown className="resume-summary" />
         </div>
       ) : null,
 
@@ -71,21 +74,31 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600 }}>{w.company}</span>
+                    <InlineResumeField value={w.company} target={{ section: 'work', index: i, field: 'company' }} enabled={inlineEditing} style={{ fontWeight: 600 }} />
                     <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
                       {w.start_date} ~ {w.end_date || '至今'}
                     </span>
                   </div>
                   {(w.department || w.position) && (
                     <div style={{ color: 'var(--resume-sub)', fontSize: '12px', marginTop: '2px' }}>
-                      {w.department}{w.department && w.position && ' '}{w.position}
+                    <InlineResumeField value={w.department} target={{ section: 'work', index: i, field: 'department' }} enabled={inlineEditing} />
+                    {w.department && w.position && (
+                      <InlineResumeField
+                        value={w.department_position_separator ?? DEFAULT_DEPARTMENT_POSITION_SEPARATOR}
+                        target={{ section: 'work', index: i, field: 'department_position_separator' }}
+                        enabled={inlineEditing}
+                        className="resume-work-separator"
+                        placeholder=""
+                      />
+                    )}
+                    <InlineResumeField value={w.position} target={{ section: 'work', index: i, field: 'position' }} enabled={inlineEditing} />
                     </div>
                   )}
                 </div>
               </div>
               {w.description && (
                 <div style={{ marginTop: '4px', color: 'var(--resume-highlight)' }}>
-                  <MarkdownRenderer content={w.description} />
+                  <InlineResumeField value={w.description} target={{ section: 'work', index: i, field: 'description' }} enabled={inlineEditing} markdown />
                 </div>
               )}
             </div>
@@ -100,7 +113,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
           {projects.map((p, i) => (
             <div key={i} data-section="projects" data-item-index={i} style={{ marginBottom: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 600 }}>{p.name}</span>
+                <InlineResumeField value={p.name} target={{ section: 'projects', index: i, field: 'name' }} enabled={inlineEditing} style={{ fontWeight: 600 }} />
                 <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
                   {p.start_date}{p.end_date ? ` ~ ${p.end_date}` : ''}
                 </span>
@@ -116,7 +129,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
                   )}
                 </div>
               )}
-              {p.description && <div style={{ color: 'var(--resume-muted)', marginTop: '4px' }}><MarkdownRenderer content={p.description} /></div>}
+              {p.description && <div style={{ color: 'var(--resume-muted)', marginTop: '4px' }}><InlineResumeField value={p.description} target={{ section: 'projects', index: i, field: 'description' }} enabled={inlineEditing} markdown /></div>}
             </div>
           ))}
         </div>
@@ -130,7 +143,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
             <div key={i} data-section="education" data-item-index={i} style={{ marginBottom: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>
-                  <span style={{ fontWeight: 600 }}>{e.institution}</span>
+                  <InlineResumeField value={e.institution} target={{ section: 'education', index: i, field: 'institution' }} enabled={inlineEditing} style={{ fontWeight: 600 }} />
                   {e.area && <span style={{ color: 'var(--resume-dim)' }}>{' · '}{e.area}</span>}
                 </div>
                 <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>
@@ -139,7 +152,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
               </div>
               {e.description && (
                 <div style={{ marginTop: '4px', color: 'var(--resume-muted)' }}>
-                  <MarkdownRenderer content={e.description} />
+                  <InlineResumeField value={e.description} target={{ section: 'education', index: i, field: 'description' }} enabled={inlineEditing} markdown />
                 </div>
               )}
             </div>
@@ -151,7 +164,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
       skills_text ? (
         <div key="skills" className="resume-section--clickable" style={{ marginBottom: `${style.section_gap}px`, ...sectionClickStyle }} onClick={handleClick('skills')}>
           {renderHeading('Skills')}
-          <MarkdownRenderer content={skills_text} />
+          <InlineResumeField value={skills_text} target={{ section: 'skills', field: 'skills_text' }} enabled={inlineEditing} markdown />
         </div>
       ) : null,
 
@@ -162,7 +175,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
           {awards.map((a, i) => (
             <div key={i} data-section="awards" data-item-index={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
               <div>
-                <span style={{ fontWeight: 600 }}>{a.title}</span>
+                <InlineResumeField value={a.title} target={{ section: 'awards', index: i, field: 'title' }} enabled={inlineEditing} style={{ fontWeight: 600 }} />
                 {a.awarder && <span style={{ color: 'var(--resume-dim)' }}>{' · '}{a.awarder}</span>}
               </div>
               {a.date && <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>{a.date}</span>}
@@ -178,7 +191,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {languages.map((lang, i) => (
               <span key={i} style={{ fontSize: '13px' }}>
-                {lang.language}
+                <InlineResumeField value={lang.language} target={{ section: 'languages', index: i, field: 'language' }} enabled={inlineEditing} />
                 {lang.fluency && <span style={{ color: 'var(--resume-dim)', marginLeft: '4px' }}>({lang.fluency})</span>}
               </span>
             ))}
@@ -212,12 +225,12 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
           <div key={i} style={{ marginBottom: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <div>
-                <span style={{ fontWeight: 600 }}>{item.title}</span>
+                <InlineResumeField value={item.title} target={{ section: 'custom-item', sectionId, index: i, field: 'title' }} enabled={inlineEditing} style={{ fontWeight: 600 }} />
                 {item.subtitle && <span style={{ color: 'var(--resume-dim)' }}>{' · '}{item.subtitle}</span>}
               </div>
               {item.date && <span style={{ fontSize: '12px', color: 'var(--resume-dim)' }}>{item.date}</span>}
             </div>
-            {item.description && <div style={{ color: 'var(--resume-muted)', marginTop: '2px' }}><MarkdownRenderer content={item.description} /></div>}
+            {item.description && <div style={{ color: 'var(--resume-muted)', marginTop: '2px' }}><InlineResumeField value={item.description} target={{ section: 'custom-item', sectionId, index: i, field: 'description' }} enabled={inlineEditing} markdown /></div>}
             {item.highlights.length > 0 && (
               <ul style={{ listStyle: 'none', padding: 0, margin: '4px 0 0' }}>
                 {item.highlights.map((h, j) => (
@@ -254,6 +267,7 @@ export default function MinimalTemplate({ resume, onSectionClick }: Props) {
         style_config={style}
         sectionClickStyle={sectionClickStyle}
         onClickBasics={handleClick('basics')}
+        inlineEditing={inlineEditing}
       />
 
       {/* Ordered visible sections */}

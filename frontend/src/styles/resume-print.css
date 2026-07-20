@@ -193,6 +193,46 @@
   border-radius: 4px;
 }
 
+.inline-resume-field {
+  min-width: 1ch;
+  border-radius: 3px;
+  outline: 1px dashed transparent;
+  outline-offset: 2px;
+  cursor: text;
+  transition: background 0.15s, outline-color 0.15s;
+}
+
+.inline-resume-field:hover {
+  background: rgba(0, 240, 255, 0.08);
+  outline-color: rgba(0, 160, 190, 0.45);
+}
+
+.inline-resume-field:focus {
+  background: rgba(0, 240, 255, 0.1);
+  outline: 2px solid rgba(0, 160, 190, 0.7);
+}
+
+.inline-resume-field--markdown {
+  display: block;
+  min-height: 1.4em;
+}
+
+.inline-resume-field__placeholder {
+  color: var(--resume-dim);
+  opacity: 0.6;
+}
+
+.resume-work-separator {
+  display: inline-block;
+  min-width: 0.7em;
+  margin: 0 0.35em;
+  text-align: center;
+}
+
+.paged-preview__measure .inline-resume-field {
+  outline: none;
+}
+
 .resume-highlights {
   list-style: none;
   padding: 0;
@@ -413,6 +453,13 @@
   /* Remove interactive hover effects in print */
   .resume-section--clickable:hover {
     background: transparent !important;
+  }
+
+  .inline-resume-field,
+  .inline-resume-field:hover,
+  .inline-resume-field:focus {
+    background: transparent !important;
+    outline: none !important;
   }
 
   /* Hide non-resume UI elements during print */

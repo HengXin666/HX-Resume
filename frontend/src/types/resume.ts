@@ -72,6 +72,8 @@ export interface WorkItem {
   /** 部门名称 */
   department: string;
   position: string;
+  /** 部门与岗位之间的连接符，例如 ·、/、|、→ */
+  department_position_separator: string;
   website: string;
   start_date: string;
   end_date: string;
@@ -80,6 +82,8 @@ export interface WorkItem {
   /** 公司 Logo（Base64 data URL） */
   logo: string;
 }
+
+export const DEFAULT_DEPARTMENT_POSITION_SEPARATOR = '·';
 
 export interface SkillItem {
   /** Markdown 技能描述（用户自由编写） */

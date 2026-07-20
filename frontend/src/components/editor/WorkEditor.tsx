@@ -1,5 +1,6 @@
 import { DeleteOutlined, PlusOutlined, UploadOutlined, ScissorOutlined } from '@ant-design/icons';
 import { Button, Collapse, Form, Input, Upload } from 'antd';
+import { DEFAULT_DEPARTMENT_POSITION_SEPARATOR } from '../../types/resume';
 import type { WorkItem } from '../../types/resume';
 import { useResumeStore } from '../../stores/resumeStore';
 import MarkdownEditor from '../MarkdownEditor';
@@ -10,6 +11,7 @@ const emptyWork: WorkItem = {
   company: '',
   department: '',
   position: '',
+  department_position_separator: DEFAULT_DEPARTMENT_POSITION_SEPARATOR,
   website: '',
   start_date: '',
   end_date: '',
@@ -118,12 +120,20 @@ export default function WorkEditor() {
             </Form.Item>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 88px 1fr', gap: '8px' }}>
           <Form.Item label="部门">
             <Input
               value={w.department}
               onChange={(e) => updateField(index, 'department', e.target.value)}
               placeholder="部门名称"
+            />
+          </Form.Item>
+          <Form.Item label="连接符" tooltip="显示在部门和岗位之间，可填写 ·、/、|、→ 等">
+            <Input
+              value={w.department_position_separator ?? DEFAULT_DEPARTMENT_POSITION_SEPARATOR}
+              onChange={(e) => updateField(index, 'department_position_separator', e.target.value)}
+              placeholder="·"
+              style={{ textAlign: 'center' }}
             />
           </Form.Item>
           <Form.Item label="岗位">
