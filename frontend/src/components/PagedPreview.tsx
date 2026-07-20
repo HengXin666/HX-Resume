@@ -8,6 +8,10 @@ interface Props {
   pageHeightMM: number;
   /** The resume template content to paginate */
   children: ReactNode;
+  /** A read-only copy used for measurement and export. */
+  staticChildren?: ReactNode;
+  /** Direct editing uses one continuous DOM tree to avoid editable page clones. */
+  editing?: boolean;
 }
 
 /** Convert mm to px at 96 dpi */
@@ -36,7 +40,7 @@ const PAGE_GAP_PX = 24;
  * (which needs the complete unclipped .resume-page) still works.
  */
 const PagedPreview = forwardRef<HTMLDivElement, Props>(
-  ({ pageWidthMM, pageHeightMM, children }, ref) => {
+  ({ pageWidthMM, pageHeightMM, children, staticChildren = children, editing = false }, ref) => {
     const measureRef = useRef<HTMLDivElement>(null);
     const exportRef = useRef<HTMLDivElement>(null);
     const [pageCount, setPageCount] = useState(1);
@@ -88,7 +92,7 @@ const PagedPreview = forwardRef<HTMLDivElement, Props>(
     }, [pageHeightPx]);
 
     return (
-      <div className="paged-preview" style={{ width: `${pageWidthPx}px` }}>
+      <div className={`paged-preview ${editing ? 'paged-preview--editing' : ''}`} style={{ width: `${pageWidthPx}px` }}>
         {/* ── Hidden: measurement copy ── */}
         <div
           ref={measureRef}
@@ -96,7 +100,7 @@ const PagedPreview = forwardRef<HTMLDivElement, Props>(
           className="paged-preview__measure"
           style={{ width: `${pageWidthPx}px` }}
         >
-          {children}
+          {staticChildren}
         </div>
 
         {/* ── Hidden: export copy (ref target for PDF export) ── */}
@@ -106,11 +110,19 @@ const PagedPreview = forwardRef<HTMLDivElement, Props>(
           className="paged-preview__measure"
           style={{ width: `${pageWidthPx}px` }}
         >
-          {children}
+          {staticChildren}
         </div>
 
-        {/* ── Visible: page frames ── */}
-        {Array.from({ length: pageCount }, (_, i) => (
+        {/* Editing must have exactly one browser-owned contentEditable tree.
+            Read-only mode keeps the clipped, page-by-page presentation. */}
+        {editing ? (
+          <div
+            className="paged-preview__editing-content"
+            style={{ width: `${pageWidthPx}px`, minHeight: `${pageHeightPx}px` }}
+          >
+            {children}
+          </div>
+        ) : Array.from({ length: pageCount }, (_, i) => (
           <div
             key={i}
             className="paged-preview__page-wrapper"

@@ -1,5 +1,6 @@
-import { useRef } from 'react';
-import type { CSSProperties, KeyboardEvent, ReactNode } from 'react';
+import { useMemo, useRef } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import type { ClipboardEvent, CSSProperties, FormEvent, KeyboardEvent, ReactNode } from 'react';
 import type { Basics } from '../types/resume';
 import { useResumeStore } from '../stores/resumeStore';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -48,6 +49,16 @@ export default function InlineResumeField({
   const elementRef = useRef<HTMLElement>(null);
   const initialHtmlRef = useRef('');
   const cancelledRef = useRef(false);
+
+  // contentEditable and React cannot safely co-own the same descendants. A
+  // full paste may replace nodes React still expects to reconcile, which can
+  // crash on the next pagination/store update. Rendering one opaque HTML blob
+  // makes the editable subtree browser-owned for the duration of the edit.
+  const editableHtml = useMemo(() => {
+    if (!enabled || !value) return '';
+    if (markdown) return renderToStaticMarkup(<MarkdownRenderer content={value} />);
+    return escapeHtml(value);
+  }, [enabled, markdown, value]);
 
   if (!enabled) {
     if (markdown) return <MarkdownRenderer content={value} className={className} />;
@@ -101,6 +112,16 @@ export default function InlineResumeField({
       cancelledRef.current = false;
       initialHtmlRef.current = elementRef.current?.innerHTML ?? '';
     },
+    onInput: (event: FormEvent<HTMLElement>) => {
+      event.currentTarget.dataset.inlineEmpty = event.currentTarget.innerText.trim() ? 'false' : 'true';
+    },
+    onPaste: (event: ClipboardEvent<HTMLElement>) => {
+      // Pasted Word/web HTML frequently contains nested blocks and attributes
+      // that are invalid inside inline fields. Keep the text and let the
+      // Markdown renderer restore supported formatting after commit.
+      event.preventDefault();
+      insertPlainText(event.clipboardData.getData('text/plain'));
+    },
     onKeyDown: handleKeyDown,
     onBlur: () => {
       const element = elementRef.current;
@@ -118,17 +139,52 @@ export default function InlineResumeField({
 
   if (markdown) {
     return (
-      <div {...editableProps} className={`inline-resume-field inline-resume-field--markdown ${className ?? ''}`.trim()} style={style}>
-        {value ? <MarkdownRenderer content={value} /> : <span className="inline-resume-field__placeholder">{placeholder}</span>}
-      </div>
+      <div
+        {...editableProps}
+        className={`inline-resume-field inline-resume-field--markdown ${className ?? ''}`.trim()}
+        style={style}
+        data-placeholder={placeholder}
+        dangerouslySetInnerHTML={{ __html: editableHtml }}
+      />
     );
   }
 
   return (
-    <span {...editableProps} className={`inline-resume-field ${className ?? ''}`.trim()} style={style}>
-      {(children ?? value) || <span className="inline-resume-field__placeholder">{placeholder}</span>}
-    </span>
+    <span
+      {...editableProps}
+      className={`inline-resume-field ${className ?? ''}`.trim()}
+      style={style}
+      data-placeholder={placeholder}
+      dangerouslySetInnerHTML={{ __html: editableHtml }}
+    />
   );
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function insertPlainText(value: string) {
+  // execCommand is deprecated but remains the only broadly supported way to
+  // preserve the current undo stack for contentEditable. The Range fallback
+  // covers browsers that no longer implement it.
+  if (document.execCommand('insertText', false, value)) return;
+
+  const selection = window.getSelection();
+  if (!selection?.rangeCount) return;
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+  const textNode = document.createTextNode(value);
+  range.insertNode(textNode);
+  range.setStartAfter(textNode);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 function normalizeInlineText(value: string): string {
@@ -224,6 +280,7 @@ function htmlToMarkdown(root: HTMLElement): string {
       case 'h5': return `### ${content}\n\n`;
       case 'blockquote': return content.split('\n').filter(Boolean).map((line) => `> ${line}`).join('\n') + '\n\n';
       case 'p': return `${content}\n\n`;
+      case 'div': return `${content}\n`;
       case 'ul':
       case 'ol': return `${Array.from(node.children).map((child, index) => {
         const prefix = node.tagName.toLowerCase() === 'ol' ? `${index + 1}. ` : '- ';

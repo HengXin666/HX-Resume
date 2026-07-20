@@ -32,12 +32,14 @@ const ResumePreview = forwardRef<HTMLDivElement, Props>(({ onSectionClick, inlin
   return (
     <div
       id="resume-preview"
-      className={isDark ? 'resume-preview-dark' : ''}
+      className={`${isDark ? 'resume-preview-dark' : ''} ${inlineEditing ? 'resume-preview--editing' : ''}`.trim()}
     >
       <PagedPreview
         ref={ref}
         pageWidthMM={pageWidthMM}
         pageHeightMM={pageHeightMM}
+        editing={inlineEditing}
+        staticChildren={<Template resume={resume} />}
       >
         <Template resume={resume} onSectionClick={onSectionClick} inlineEditing={inlineEditing} />
       </PagedPreview>

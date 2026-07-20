@@ -806,7 +806,7 @@ export default function EditorPage() {
         </div>
 
         {/* Panel 3: Right Preview Area */}
-        <div className="preview-panel" ref={previewPanelRef}>
+        <div className={`preview-panel ${inlineEditing && !isPublicMode ? 'preview-panel--editing' : ''}`} ref={previewPanelRef}>
           <div className="preview-panel__toolbar" role="toolbar" aria-label="简历预览工具">
             {!isPublicMode && (
               <button
@@ -817,7 +817,7 @@ export default function EditorPage() {
                 title="开启后可直接点击预览中的文字进行编辑"
               >
                 <EditOutlined />
-                {inlineEditing ? '退出直接编辑' : '直接编辑'}
+                {inlineEditing ? '完成编辑' : '直接编辑'}
               </button>
             )}
             <button type="button" className="preview-panel__zoom-button" onClick={() => adjustPreviewZoom(-0.1)} aria-label="缩小预览">
@@ -851,6 +851,21 @@ export default function EditorPage() {
               {!isPublicMode && inlineEditing ? '点击文字修改' : '局部缩放'}
             </span>
           </div>
+          {!isPublicMode && inlineEditing && (
+            <div className="preview-panel__editing-banner" role="status">
+              <span className="preview-panel__editing-pulse" aria-hidden="true" />
+              <span>
+                <strong>直接编辑中</strong>
+                点击带虚线的文字即可修改，粘贴会自动清理外部格式
+              </span>
+              <span className="preview-panel__editing-shortcuts">
+                <kbd>Enter</kbd> 保存单行
+                <kbd>Ctrl/⌘ Enter</kbd> 保存多行
+                <kbd>Esc</kbd> 撤销
+              </span>
+              <button type="button" onClick={() => setInlineEditing(false)}>完成</button>
+            </div>
+          )}
           <div className="preview-panel__viewport" ref={previewViewportRef}>
             <div
               className="preview-panel__canvas"

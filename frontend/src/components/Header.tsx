@@ -20,7 +20,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Dropdown, Empty, Modal, Popconfirm, Space, Tooltip, message } from 'antd';
 import type { MenuProps } from 'antd';
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AutoSaveIndicator from './AutoSaveIndicator';
 import SyncSettings from './SyncSettings';
@@ -58,8 +58,16 @@ export default function Header({ onExportPDF, onExportHTML, onExportImage, onPub
 
   const backendSync = useBackendSyncContext();
 
-  const handleForcePush = async () => {
-    if (!backendSync) return;
+  const handleForcePush = useCallback(async () => {
+    if (!backendSync) {
+      message.warning(
+        import.meta.env.VITE_STATIC_MODE === 'true'
+          ? '当前为纯前端模式，无法保存到数据库'
+          : '后端同步尚未就绪，请稍后重试',
+      );
+      return;
+    }
+    if (forceSyncing) return;
     setForceSyncing(true);
     const result = await backendSync.forcePush();
     setForceSyncing(false);
@@ -68,7 +76,7 @@ export default function Header({ onExportPDF, onExportHTML, onExportImage, onPub
     } else {
       message.error(`保存到后端失败: ${result.error}`);
     }
-  };
+  }, [backendSync, forceSyncing]);
 
   const handleForcePull = async () => {
     if (!backendSync) return;
@@ -148,14 +156,33 @@ export default function Header({ onExportPDF, onExportHTML, onExportImage, onPub
     e.target.value = '';
   };
 
-  const handleSaveVersion = () => {
+  const handleSaveVersion = useCallback(() => {
     const saved = saveVersion();
     if (saved) {
       message.success('版本快照已保存');
     } else {
       message.info('内容未变化，无需保存快照');
     }
-  };
+  }, [saveVersion]);
+
+  useEffect(() => {
+    const handleSaveShortcut = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 's') return;
+
+      event.preventDefault();
+      if (event.repeat || !useResumeStore.getState().activeResume()) return;
+
+      // Inline resume fields commit on blur. Flush the active edit before
+      // pushing so Ctrl/⌘+S always sends what is currently on screen.
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      void handleForcePush();
+    };
+
+    window.addEventListener('keydown', handleSaveShortcut);
+    return () => window.removeEventListener('keydown', handleSaveShortcut);
+  }, [handleForcePush]);
 
   /** 公开简历专用导出菜单 */
   const publicExportMenuItems: MenuProps['items'] = [
@@ -239,13 +266,14 @@ export default function Header({ onExportPDF, onExportHTML, onExportImage, onPub
           <AutoSaveIndicator />
           {import.meta.env.VITE_STATIC_MODE !== 'true' && backendSync && (
             <>
-              <Tooltip title="强制将本地数据保存到后端（覆盖后端）">
+              <Tooltip title="保存到数据库（Ctrl/⌘ + S，将用本地数据覆盖后端）">
                 <Button
                   type="text"
                   size="small"
                   icon={forceSyncing ? <LoadingOutlined spin /> : <CloudUploadOutlined />}
                   onClick={handleForcePush}
                   disabled={forceSyncing}
+                  aria-label="保存到数据库"
                   style={{ color: 'var(--neon-cyan)', fontSize: '13px' }}
                 />
               </Tooltip>
@@ -289,6 +317,7 @@ export default function Header({ onExportPDF, onExportHTML, onExportImage, onPub
                 type="text"
                 icon={<SaveOutlined />}
                 onClick={handleSaveVersion}
+                aria-label="保存版本快照"
                 style={{ color: 'var(--neon-green)', fontSize: '14px' }}
               />
             </Tooltip>

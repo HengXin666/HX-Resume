@@ -202,6 +202,11 @@
   transition: background 0.15s, outline-color 0.15s;
 }
 
+.resume-preview--editing .inline-resume-field {
+  background: rgba(0, 160, 190, 0.045);
+  outline-color: rgba(0, 160, 190, 0.3);
+}
+
 .inline-resume-field:hover {
   background: rgba(0, 240, 255, 0.08);
   outline-color: rgba(0, 160, 190, 0.45);
@@ -217,9 +222,11 @@
   min-height: 1.4em;
 }
 
-.inline-resume-field__placeholder {
+.inline-resume-field[data-inline-empty='true']::before {
+  content: attr(data-placeholder);
   color: var(--resume-dim);
   opacity: 0.6;
+  pointer-events: none;
 }
 
 .resume-work-separator {
@@ -294,6 +301,16 @@
   border-radius: 2px;
   overflow: hidden;
   flex-shrink: 0;
+}
+
+.paged-preview__editing-content {
+  position: relative;
+}
+
+.resume-preview--editing .paged-preview__editing-content > .resume-page {
+  box-shadow:
+    0 0 0 3px rgba(0, 160, 190, 0.34),
+    0 10px 38px rgba(0, 0, 0, 0.28);
 }
 
 /* Inside paged preview, remove .resume-page's own shadow (wrapper provides it) */
